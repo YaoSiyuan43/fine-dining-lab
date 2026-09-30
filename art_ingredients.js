@@ -11,6 +11,7 @@
   const { ell, path, circle, hi } = A._h;
   const scatter = A._h.scatter;
   const H = A.halftone, INK = A.INK;
+  const FINE = A.fine, MICRO = A.micro;
 
   function screen(d, fill, dot, size, angle, extra='') {
     return path(d, H(fill, dot, size, angle).url, extra);
@@ -44,6 +45,7 @@
     ell(2,10,44,20,'#0c0a08','opacity=".5"') +
     screenEll(0,4,46,20,'cream','creamDot',6,15) +
     screenEll(0,-8,42,15,'sear','searDot',5,15) +
+    ell(0,-9,38,11,A.fine('sear','searDot',20).url,'opacity=".55"') +
     hi(-8,-12,26,0.55) +
     path('M-30 -8 Q0 -16 30 -8','#4a2810','stroke-width="2" fill="none" opacity=".5"') +
     path('M-24 -3 Q0 -9 24 -3','#5e3414','stroke-width="1.4" fill="none" opacity=".4"')
@@ -131,6 +133,7 @@
   /* ---------------- GARNISH ---------------- */
   ART.caviar = () => g(
     ell(0,4,34,15,'#141216') +
+    ell(0,3,32,13,MICRO('ink','inkDot',0).url,'opacity=".7"') +
     scatter(0,0,32,13,46,3.4,H('ink','inkDot',5,15).url,3) +
     scatter(-2,-3,24,9,26,3.2,'#1a1a20',7) +
     scatter(-4,-4,22,8,14,1.1,'#fffbe8',11)
@@ -151,6 +154,7 @@
   ART.micro_herb = () => g( leafSpray('#4a7a3a',6,0.6) );
   ART.gold_leaf = () => g(
     screen('M-20 -8 L-4 -14 L18 -6 L14 10 L-8 14 L-22 4 Z','gold','goldDot',3,15)+
+    path('M-20 -8 L18 -6 L14 10 L-22 4 Z','none',`fill="${FINE('gold','goldDot',40).url}" opacity=".6"`)+
     path('M-20 -8 L14 10 M-4 -14 L-8 14','#fff2c0','stroke-width="1" opacity=".7"')+hi(-6,-6,14,0.7)
   );
   ART.charcoal_oil = () => g( scatter(0,0,30,12,10,4,'#0a0a0c',3)+scatter(0,0,26,10,10,1,'#3a3a44',7) );

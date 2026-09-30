@@ -62,6 +62,15 @@
   #vessel-strip{display:flex;gap:6px;overflow-x:auto;padding:8px 16px;background:#0d0c0f;border-top:1px solid var(--line)}
   .vchip{flex:none;font-size:11px;padding:6px 12px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);cursor:pointer;white-space:nowrap;transition:.14s}
   .vchip:hover{border-color:var(--gold)} .vchip.on{background:var(--gold);color:#1a1408;font-weight:600;border-color:var(--gold)}
+  #light-panel{display:none;flex-wrap:wrap;gap:14px;align-items:center;padding:10px 16px;background:#0d0c0f;border-top:1px solid var(--line)}
+  #light-panel.on{display:flex}
+  #light-panel .lp-row{display:flex;align-items:center;gap:8px}
+  #light-panel .lp-lbl{font-size:11px;color:var(--muted);white-space:nowrap}
+  #light-panel input[type=range]{width:96px;accent-color:var(--gold)}
+  #light-panel input[type=color]{width:26px;height:22px;padding:0;border:1px solid var(--line);border-radius:5px;background:none;cursor:pointer}
+  #bg-swatches{display:flex;gap:5px}
+  #bg-swatches .sw{width:20px;height:20px;border-radius:5px;border:1px solid var(--line);cursor:pointer;transition:.12s}
+  #bg-swatches .sw:hover{transform:scale(1.15)} #bg-swatches .sw.on{box-shadow:0 0 0 2px var(--gold)}
 
   /* RIGHT creation card */
   #card{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
@@ -177,8 +186,15 @@
       <button class="btn" data-act="random">🎲 主厨随机灵感</button>
       <button class="btn" data-act="demo">📖 加载名厨示范菜</button>
       <button class="btn" data-act="menu">📔 我的菜单</button>
+      <button class="btn" data-act="light">🎨 光影背景</button>
       <span style="flex:1"></span>
       <span id="layer-count" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div id="light-panel">
+      <div class="lp-row"><span class="lp-lbl">背景</span><div id="bg-swatches"></div><input type="color" id="bg-custom" title="自定义背景色"></div>
+      <div class="lp-row"><span class="lp-lbl">聚光强度</span><input type="range" id="spot-int" min="0" max="100" value="55"></div>
+      <div class="lp-row"><span class="lp-lbl">光线冷暖</span><input type="range" id="spot-warm" min="0" max="100" value="60"></div>
+      <div class="lp-row"><span class="lp-lbl">暗角</span><input type="range" id="vig-amt" min="0" max="100" value="72"></div>
     </div>
     <div id="vessel-strip"></div>
   </main>
@@ -261,17 +277,20 @@
   // fix a typo-safe green dot
   INK.greenDot = '#6aa84a';
 
-  // ---- halftone pattern registry: one <pattern> per (fill,dot,size,angle) ----
+  // ---- halftone pattern registry: one <pattern> per (fill,dot,size,angle,dotScale) ----
   let _patSeq = 0;
   const _patCache = new Map();
-  function halftone(fill, dot, size, angle) {
+  // dotScale (default 0.92): fraction of the half-cell the dot radius fills.
+  //   larger -> darker/coarser tone; smaller -> lighter/finer, airier screen.
+  function halftone(fill, dot, size, angle, dotScale) {
     // resolve palette key names (e.g. 'cream','creamDot') to hex; pass through literal colors
     fill = INK[fill] || fill;
     dot  = INK[dot]  || dot;
-    const kkey = fill + '|' + dot + '|' + size + '|' + angle;
+    const ds = (dotScale==null ? 0.92 : dotScale);
+    const kkey = fill + '|' + dot + '|' + size + '|' + angle + '|' + ds;
     if (_patCache.has(kkey)) return _patCache.get(kkey);
     const id = 'ht' + (_patSeq++);
-    const r = (size * 0.5 * 0.92).toFixed(2);
+    const r = (size * 0.5 * ds).toFixed(2);
     const c = (size / 2).toFixed(2);
     const def =
       `<pattern id="${id}" width="${size}" height="${size}" patternUnits="userSpaceOnUse" patternTransform="rotate(${angle})">` +
@@ -281,6 +300,11 @@
     _patCache.set(kkey, rec);
     return rec;
   }
+  // Fine micro-dot screen for HIGH-DETAIL zones (caviar, roe, crusts, garnish):
+  // very small cell + small dots => a refined, dense stipple that reads as detail
+  // against the coarser body screens. Returns a pattern rec (use .url as a fill).
+  function fine(fill, dot, angle=15){ return halftone(fill, dot, 2.4, angle, 0.7); }
+  function micro(fill, dot, angle=0){ return halftone(fill, dot, 1.8, angle, 0.62); }
 
   // Collect all defs emitted so far (patterns + gradients + filters)
   const _extraDefs = [];
@@ -312,7 +336,7 @@
   }
 
   root.FDL_ART = {
-    INK, halftone, collectDefs, resetDefs, pushDef,
+    INK, halftone, fine, micro, collectDefs, resetDefs, pushDef,
     _h:{ell,path,circle,hi,scatter}
   };
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -330,6 +354,7 @@
   const { ell, path, circle, hi } = A._h;
   const scatter = A._h.scatter;
   const H = A.halftone, INK = A.INK;
+  const FINE = A.fine, MICRO = A.micro;
 
   function screen(d, fill, dot, size, angle, extra='') {
     return path(d, H(fill, dot, size, angle).url, extra);
@@ -363,6 +388,7 @@
     ell(2,10,44,20,'#0c0a08','opacity=".5"') +
     screenEll(0,4,46,20,'cream','creamDot',6,15) +
     screenEll(0,-8,42,15,'sear','searDot',5,15) +
+    ell(0,-9,38,11,A.fine('sear','searDot',20).url,'opacity=".55"') +
     hi(-8,-12,26,0.55) +
     path('M-30 -8 Q0 -16 30 -8','#4a2810','stroke-width="2" fill="none" opacity=".5"') +
     path('M-24 -3 Q0 -9 24 -3','#5e3414','stroke-width="1.4" fill="none" opacity=".4"')
@@ -450,6 +476,7 @@
   /* ---------------- GARNISH ---------------- */
   ART.caviar = () => g(
     ell(0,4,34,15,'#141216') +
+    ell(0,3,32,13,MICRO('ink','inkDot',0).url,'opacity=".7"') +
     scatter(0,0,32,13,46,3.4,H('ink','inkDot',5,15).url,3) +
     scatter(-2,-3,24,9,26,3.2,'#1a1a20',7) +
     scatter(-4,-4,22,8,14,1.1,'#fffbe8',11)
@@ -470,6 +497,7 @@
   ART.micro_herb = () => g( leafSpray('#4a7a3a',6,0.6) );
   ART.gold_leaf = () => g(
     screen('M-20 -8 L-4 -14 L18 -6 L14 10 L-8 14 L-22 4 Z','gold','goldDot',3,15)+
+    path('M-20 -8 L18 -6 L14 10 L-22 4 Z','none',`fill="${FINE('gold','goldDot',40).url}" opacity=".6"`)+
     path('M-20 -8 L14 10 M-4 -14 L-8 14','#fff2c0','stroke-width="1" opacity=".7"')+hi(-6,-6,14,0.7)
   );
   ART.charcoal_oil = () => g( scatter(0,0,30,12,10,4,'#0a0a0c',3)+scatter(0,0,26,10,10,1,'#3a3a44',7) );
@@ -1144,7 +1172,7 @@ const techById = id => DB.TECHNIQUES.find(t=>t.id===id);
 const ART = window.FDL_ART, ING_ART = window.FDL_ING_ART, VESSEL_ART = window.FDL_VESSEL_ART;
 
 /* ================= STATE ================= */
-const state = { season:'winter', vessel:'raw_ceramic', layers:[], name:'未命名之作' };
+const state = { season:'winter', vessel:'raw_ceramic', layers:[], name:'未命名之作', light:{ bg:'#141210', spot:55, warm:60, vig:72 } };
 // layers: [{ing:<id>, tech:<id|null>}]
 
 const MAX_LAYERS = 12;
@@ -1199,6 +1227,60 @@ function ensurePositions(){
   state.layers.forEach((L,idx)=>{ if(!L.pos) L.pos = defaultPos(idx,n); });
 }
 
+// #3: technique-transformed appearance. Transforming techniques render a
+// distinct FORM (pearls/foam/powder/crisp/frost) from the ingredient's color;
+// others fall back to the base art. Returns an SVG group string (local 0,0).
+const TRANSFORM_TECH = new Set(['spherify','foam','freeze_dry','dehydrate','nitro','emulsify']);
+function applyTechnique(L, baseFn){
+  const ing = byId(L.ing);
+  if(!ing || !L.tech || !TRANSFORM_TECH.has(L.tech)) return baseFn();
+  const col = ing.color || '#d8b98a';
+  const A = ART, H = A.halftone;
+  const rnd=(s=>()=>{s=(s*9301+49297)%233280;return s/233280;})(L.ing.length*7+ (L.tech.length*13));
+  const scr = H(col, '#000', 3, 15).url;
+  if(L.tech==='spherify'){
+    // caviar-like pearls of the ingredient's color
+    let s=`<ellipse cx="0" cy="4" rx="30" ry="13" fill="#0c0a08" opacity=".3"/>`;
+    for(let i=0;i<22;i++){const a=rnd()*6.28,rr=Math.sqrt(rnd());const x=Math.cos(a)*28*rr,y=Math.sin(a)*12*rr;
+      const r=3+rnd()*1.6; s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${col}"/><circle cx="${(x-1).toFixed(1)}" cy="${(y-1).toFixed(1)}" r="1" fill="#fff" opacity=".6"/>`;}
+    return `<g>${s}</g>`;
+  }
+  if(L.tech==='foam'){
+    // airy espuma: light bubbly cloud
+    let s='';
+    for(let i=0;i<26;i++){const a=rnd()*6.28,rr=Math.sqrt(rnd());const x=Math.cos(a)*34*rr,y=Math.sin(a)*18*rr;
+      const r=4+rnd()*7; s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${col}" opacity="${(0.14+rnd()*0.2).toFixed(2)}"/>`;}
+    s+=`<circle cx="-8" cy="-8" r="3" fill="#fff" opacity=".4"/>`;
+    return `<g>${s}</g>`;
+  }
+  if(L.tech==='freeze_dry'){
+    // brittle angular shards + powder dusting
+    let s='';
+    for(let i=0;i<7;i++){const a=(i/7)*6.28,x=Math.cos(a)*20,y=Math.sin(a)*10;
+      s+=`<path d="M${x.toFixed(0)} ${y.toFixed(0)} l${(6+rnd()*8).toFixed(0)} ${(-8-rnd()*8).toFixed(0)} l${(4+rnd()*6).toFixed(0)} ${(6+rnd()*6).toFixed(0)} z" fill="${col}" opacity=".85"/>`;}
+    for(let i=0;i<30;i++){const x=(rnd()-0.5)*56,y=(rnd()-0.5)*26;s+=`<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(0.6+rnd()).toFixed(1)}" fill="${col}" opacity=".5"/>`;}
+    return `<g>${s}</g>`;
+  }
+  if(L.tech==='dehydrate'){
+    // thin translucent crisp/tuile of the ingredient
+    return `<g><path d="M-32 6 Q-20 -14 0 -12 Q26 -10 34 8 Q10 16 -32 6 Z" fill="${col}" opacity=".8"/>`+
+      `<path d="M-32 6 Q-20 -14 0 -12 Q26 -10 34 8" fill="none" stroke="#fff" stroke-width="1" opacity=".3"/>`+
+      `<ellipse cx="-30" cy="-4" rx="10" ry="4" fill="#fff" opacity=".12"/></g>`;
+  }
+  if(L.tech==='nitro'){
+    // frosted version + rising vapor wisps
+    return `<g><g opacity=".9">${baseFn()}</g>`+
+      `<ellipse cx="0" cy="0" rx="40" ry="20" fill="#dfeaf0" opacity=".22"/>`+
+      `<path d="M-16 -14 q-8 -18 4 -32 M14 -12 q10 -16 0 -34" stroke="#dfeaf0" stroke-width="4" fill="none" opacity=".3" stroke-linecap="round"/></g>`;
+  }
+  if(L.tech==='emulsify'){
+    // smooth glossy smear/quenelle of the ingredient
+    return `<g><path d="M-40 4 C-30 -14 30 -14 42 2 C30 12 -20 14 -40 4 Z" fill="${col}"/>`+
+      `<path d="M-34 -2 C-20 -10 24 -10 34 0" fill="none" stroke="#fff" stroke-width="3" opacity=".28" stroke-linecap="round"/></g>`;
+  }
+  return baseFn();
+}
+
 function renderStage(){
   const host = document.getElementById('stage-3d');
   const cx=STAGE_CX, cy=STAGE_CY;
@@ -1213,20 +1295,27 @@ function renderStage(){
     if(L.tech==='char'||L.tech==='torch'){ dish += `<ellipse cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" rx="${(52*p.s).toFixed(0)}" ry="${(24*p.s).toFixed(0)}" fill="#e07a30" opacity=".07"/>`; }
     if(L.tech==='smoke'||L.tech==='ash'){ dish += `<path d="M${p.x.toFixed(0)} ${(p.y-20).toFixed(0)} q14 -30 2 -56 q-8 -18 8 -36" stroke="#cfd4d8" stroke-width="5" fill="none" opacity=".14" stroke-linecap="round"/>`; }
     // the item — wrapped in a hit-target group carrying its index
-    dish += `<g class="fdl-layer" data-layer="${idx}" style="cursor:grab" transform="translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) scale(${p.s.toFixed(2)})">${fn()}</g>`;
+    dish += `<g class="fdl-layer" data-layer="${idx}" style="cursor:grab" transform="translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) scale(${p.s.toFixed(2)})">${applyTechnique(L, fn)}</g>`;
   });
   const defs = ART.collectDefs();
   const emptyHint = state.layers.length ? '' :
     `<text x="0" y="0" text-anchor="middle" font-size="20" fill="#4a4740" font-family="'Cormorant Garamond',serif" letter-spacing="2">从素材库开始你的创作</text>`;
+  // lighting from state.light
+  const LT = state.light || {bg:'#141210',spot:55,warm:60,vig:72};
+  const spotOp = (LT.spot/100*0.85).toFixed(2);
+  // warm(60)->amber #3a352c ; cool(0)->bluish #2c3140 ; interpolate
+  const warmCol = (()=>{ const t=LT.warm/100; const mix=(a,b)=>Math.round(a+(b-a)*t);
+    const r=mix(0x2c,0x46),g=mix(0x31,0x40),b=mix(0x40,0x2a); return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`; })();
+  const vigOp = (LT.vig/100*0.85).toFixed(2);
   // whole dish group rotates around plate center; plate + food together
   const svg =
     `<svg id="fdl-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
       <defs>${defs}
-        <radialGradient id="fdl-spot" cx="50%" cy="42%" r="55%"><stop offset="0%" stop-color="#3a352c" stop-opacity=".55"/><stop offset="55%" stop-color="#1a1712" stop-opacity="0"/></radialGradient>
-        <radialGradient id="fdl-vig" cx="50%" cy="46%" r="72%"><stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".72"/></radialGradient>
+        <radialGradient id="fdl-spot" cx="50%" cy="42%" r="55%"><stop offset="0%" stop-color="${warmCol}" stop-opacity="${spotOp}"/><stop offset="55%" stop-color="${LT.bg}" stop-opacity="0"/></radialGradient>
+        <radialGradient id="fdl-vig" cx="50%" cy="46%" r="72%"><stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="${vigOp}"/></radialGradient>
         <filter id="fdl-grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .04 0"/></filter>
       </defs>
-      <rect width="${STAGE_W}" height="${STAGE_H}" fill="#141210"/>
+      <rect width="${STAGE_W}" height="${STAGE_H}" fill="${LT.bg}"/>
       <rect width="${STAGE_W}" height="${STAGE_H}" fill="url(#fdl-spot)"/>
       <g transform="translate(${cx} ${cy}) rotate(${rot.toFixed(2)})">
         ${vArt}
@@ -1771,6 +1860,7 @@ document.addEventListener('click',e=>{
     if(a==='ai'){aiInspire();}
     if(a==='match'){matchDish();}
     if(a==='menu'){openMenu();}
+    if(a==='light'){document.getElementById('light-panel').classList.toggle('on');}
     if(a==='save'){saveCurrentToMenu();}
     if(a==='export-dish'){exportDishImage();}
     if(a==='export-menu'){exportMenuImage();}
@@ -1784,11 +1874,30 @@ document.getElementById('dish-name').addEventListener('click',()=>{
 document.getElementById('modal').addEventListener('click',e=>{ if(e.target.id==='modal')closeModal(); });
 
 /* ================= BOOT ================= */
+/* #2: lighting & background controls */
+const BG_PRESETS=['#141210','#0a0a0c','#1a1a20','#20161c','#161c18','#241a12','#e8e2d6','#c8bca8'];
+function renderLightPanel(){
+  const sw=document.getElementById('bg-swatches'); if(!sw)return;
+  sw.innerHTML=BG_PRESETS.map(c=>`<span class="sw ${state.light.bg===c?'on':''}" data-bg="${c}" style="background:${c}"></span>`).join('');
+  const cu=document.getElementById('bg-custom'); if(cu)cu.value=/^#[0-9a-f]{6}$/i.test(state.light.bg)?state.light.bg:'#141210';
+  const si=document.getElementById('spot-int'); if(si)si.value=state.light.spot;
+  const sm=document.getElementById('spot-warm'); if(sm)sm.value=state.light.warm;
+  const vg=document.getElementById('vig-amt'); if(vg)vg.value=state.light.vig;
+}
+function wireLightPanel(){
+  const panel=document.getElementById('light-panel');
+  document.getElementById('bg-swatches').addEventListener('click',e=>{const s=e.target.closest('[data-bg]');if(s){state.light.bg=s.dataset.bg;renderLightPanel();renderStage();}});
+  document.getElementById('bg-custom').addEventListener('input',e=>{state.light.bg=e.target.value;renderLightPanel();renderStage();});
+  document.getElementById('spot-int').addEventListener('input',e=>{state.light.spot=+e.target.value;renderStage();});
+  document.getElementById('spot-warm').addEventListener('input',e=>{state.light.warm=+e.target.value;renderStage();});
+  document.getElementById('vig-amt').addEventListener('input',e=>{state.light.vig=+e.target.value;renderStage();});
+}
 /* B4: mobile panel switcher */
 function setMobilePanel(m){ document.body.dataset.m=m; document.querySelectorAll('#mobile-nav button').forEach(b=>b.classList.toggle('on',b.dataset.m===m)); }
 document.getElementById('mobile-nav').addEventListener('click',e=>{const b=e.target.closest('[data-m]'); if(b)setMobilePanel(b.dataset.m);});
 setMobilePanel('stage');
 renderContext(); renderCatFilter(); renderPantry(); renderVessels(); renderCard();
+renderLightPanel(); wireLightPanel();
 initStage();
 </script>
 

@@ -35,17 +35,20 @@
   // fix a typo-safe green dot
   INK.greenDot = '#6aa84a';
 
-  // ---- halftone pattern registry: one <pattern> per (fill,dot,size,angle) ----
+  // ---- halftone pattern registry: one <pattern> per (fill,dot,size,angle,dotScale) ----
   let _patSeq = 0;
   const _patCache = new Map();
-  function halftone(fill, dot, size, angle) {
+  // dotScale (default 0.92): fraction of the half-cell the dot radius fills.
+  //   larger -> darker/coarser tone; smaller -> lighter/finer, airier screen.
+  function halftone(fill, dot, size, angle, dotScale) {
     // resolve palette key names (e.g. 'cream','creamDot') to hex; pass through literal colors
     fill = INK[fill] || fill;
     dot  = INK[dot]  || dot;
-    const kkey = fill + '|' + dot + '|' + size + '|' + angle;
+    const ds = (dotScale==null ? 0.92 : dotScale);
+    const kkey = fill + '|' + dot + '|' + size + '|' + angle + '|' + ds;
     if (_patCache.has(kkey)) return _patCache.get(kkey);
     const id = 'ht' + (_patSeq++);
-    const r = (size * 0.5 * 0.92).toFixed(2);
+    const r = (size * 0.5 * ds).toFixed(2);
     const c = (size / 2).toFixed(2);
     const def =
       `<pattern id="${id}" width="${size}" height="${size}" patternUnits="userSpaceOnUse" patternTransform="rotate(${angle})">` +
@@ -55,6 +58,11 @@
     _patCache.set(kkey, rec);
     return rec;
   }
+  // Fine micro-dot screen for HIGH-DETAIL zones (caviar, roe, crusts, garnish):
+  // very small cell + small dots => a refined, dense stipple that reads as detail
+  // against the coarser body screens. Returns a pattern rec (use .url as a fill).
+  function fine(fill, dot, angle=15){ return halftone(fill, dot, 2.4, angle, 0.7); }
+  function micro(fill, dot, angle=0){ return halftone(fill, dot, 1.8, angle, 0.62); }
 
   // Collect all defs emitted so far (patterns + gradients + filters)
   const _extraDefs = [];
@@ -86,7 +94,7 @@
   }
 
   root.FDL_ART = {
-    INK, halftone, collectDefs, resetDefs, pushDef,
+    INK, halftone, fine, micro, collectDefs, resetDefs, pushDef,
     _h:{ell,path,circle,hi,scatter}
   };
 })(typeof window !== 'undefined' ? window : globalThis);
