@@ -145,12 +145,18 @@
     #pantry,#stage,#card{border:none;border-bottom:1px solid var(--line)}
     /* panel visibility driven by body[data-m] */
     #pantry,#card{display:none}
-    #stage{display:flex;min-height:64vh}
+    #stage{display:flex}
     body[data-m="pantry"] #pantry{display:flex} body[data-m="pantry"] #stage,body[data-m="pantry"] #card{display:none}
     body[data-m="stage"] #stage{display:flex} body[data-m="stage"] #pantry,body[data-m="stage"] #card{display:none}
     body[data-m="card"] #card{display:flex} body[data-m="card"] #stage,body[data-m="card"] #pantry{display:none}
-    #pantry,#card{max-height:calc(100vh - 108px)}
-    #stage-3d{min-height:52vh}
+    /* each active panel scrolls on its own and clears the fixed bottom nav (~50px) */
+    #pantry,#card,#stage{max-height:calc(100vh - 104px);overflow-y:auto}
+    #stage{flex-direction:column}
+    #stage-3d{flex:none;height:56vh}
+    #ctrlbar{flex:none}
+    #vessel-strip{flex:none}
+    #light-panel{flex:none}
+    #stage>*:last-child{margin-bottom:64px}   /* clear the bottom tab bar */
     #card-scroll{padding-bottom:70px}
     #pantry-list{padding-bottom:70px}
     #flavor-radar svg{max-width:280px}
