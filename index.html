@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fine Dining Lab · 分子级摆盘工坊</title>
+<style>
+  :root{
+    --bg:#0a0a0c; --bg2:#111013; --panel:#131215; --panel2:#1a191d;
+    --line:#2a2830; --gold:#c8a15a; --gold2:#e8c884; --txt:#ece7dc;
+    --muted:#8a8578; --ok:#7ac77a; --warn:#e0954a; --danger:#e06a5a; --info:#7a9ad0;
+    --serif:'Cormorant Garamond','Songti SC','Georgia','Times New Roman',serif;
+    --display:'Cormorant Garamond','Baskerville','Songti SC','STSong',serif;
+    --sans:'Helvetica Neue','PingFang SC','Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);font-family:var(--sans);overflow:hidden;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-feature-settings:"liga" 1,"kern" 1}
+  ::-webkit-scrollbar{width:7px;height:7px}
+  ::-webkit-scrollbar-thumb{background:#2e2c34;border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  #app{display:grid;grid-template-columns:280px 1fr 320px;grid-template-rows:56px 1fr;height:100vh}
+  header{grid-column:1/4;display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:linear-gradient(180deg,#151317,#0e0d10);border-bottom:1px solid var(--line);z-index:10}
+  header .brand{font-family:var(--display);font-size:25px;font-weight:600;letter-spacing:5px;color:var(--gold2)}
+  header .brand small{font-family:var(--sans);font-size:10px;letter-spacing:2px;color:var(--muted);margin-left:10px;font-weight:400}
+  header .ctx{display:flex;gap:8px;align-items:center}
+  .chip{font-size:12px;padding:5px 12px;border-radius:16px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);cursor:pointer;transition:.15s;font-family:var(--sans)}
+  .chip:hover{border-color:var(--gold);color:var(--gold2)}
+  .chip.on{background:var(--gold);color:#1a1408;border-color:var(--gold);font-weight:600}
+
+  /* LEFT pantry */
+  #pantry{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+  #search{margin:12px;padding:9px 12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--txt);font-size:13px;outline:none}
+  #search:focus{border-color:var(--gold)}
+  #pantry-list{flex:1;overflow-y:auto;padding:0 10px 16px}
+  #cat-filter{display:flex;flex-wrap:wrap;gap:5px;padding:0 12px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}
+  .catchip{font-size:11px;padding:4px 9px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);cursor:pointer;transition:.14s;white-space:nowrap}
+  .catchip:hover{border-color:var(--gold);color:var(--gold2)}
+  .catchip.on{background:var(--gold);color:#1a1408;border-color:var(--gold);font-weight:600}
+  .ing .fav{width:18px;height:18px;flex:none;font-size:13px;line-height:1;color:#4a4740;cursor:pointer;text-align:center;transition:.14s}
+  .ing .fav:hover{color:var(--gold2);transform:scale(1.2)}
+  .ing .fav.on{color:var(--gold2)}
+  .cat-h{font-family:var(--serif);font-size:13px;letter-spacing:1px;color:var(--gold);margin:14px 6px 6px;border-bottom:1px solid var(--line);padding-bottom:4px}
+  .ing{display:flex;align-items:center;gap:9px;padding:7px 9px;margin:3px 0;border-radius:8px;background:var(--panel2);border:1px solid transparent;cursor:pointer;transition:.14s}
+  .ing:hover{border-color:var(--gold);transform:translateX(3px)}
+  .ing .dot{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.1)}
+  .ing .nm{font-size:12.5px;flex:1;line-height:1.2}
+  .ing .tier{font-size:9px;padding:1px 6px;border-radius:8px;background:#000;color:var(--muted)}
+  .ing .tier.premium{color:var(--gold2)} .ing .tier.rare{color:var(--danger)}
+
+  /* CENTER stage */
+  #stage{position:relative;background:radial-gradient(ellipse at 50% 38%,#17151a 0%,#0a0a0c 72%);display:flex;flex-direction:column;overflow:hidden}
+  #stage-3d{flex:1;position:relative}
+  #stage-3d canvas{display:block;width:100%;height:100%}
+  #stage-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);pointer-events:none;text-align:center}
+  #stage-empty .big{font-family:var(--serif);font-size:26px;color:#4a4740;letter-spacing:2px}
+  #ctrlbar{display:flex;gap:8px;align-items:center;padding:10px 16px;background:linear-gradient(0deg,#100f12,transparent);z-index:5;flex-wrap:wrap}
+  .btn{font-size:12px;padding:7px 14px;border-radius:20px;background:var(--panel2);color:var(--txt);border:1px solid var(--line);cursor:pointer;transition:.15s;font-family:var(--sans)}
+  .btn:hover{border-color:var(--gold);color:var(--gold2)}
+  .btn.gold{background:linear-gradient(135deg,var(--gold),#a07d3a);color:#1a1408;border:none;font-weight:600}
+  .btn.gold:hover{filter:brightness(1.1)}
+  #vessel-strip{display:flex;gap:6px;overflow-x:auto;padding:8px 16px;background:#0d0c0f;border-top:1px solid var(--line)}
+  .vchip{flex:none;font-size:11px;padding:6px 12px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);cursor:pointer;white-space:nowrap;transition:.14s}
+  .vchip:hover{border-color:var(--gold)} .vchip.on{background:var(--gold);color:#1a1408;font-weight:600;border-color:var(--gold)}
+
+  /* RIGHT creation card */
+  #card{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+  #card-scroll{flex:1;overflow-y:auto;padding:16px}
+  .card-title{font-family:var(--serif);font-size:15px;letter-spacing:1px;color:var(--gold);margin-bottom:10px}
+  #dish-name{font-family:var(--display);font-size:23px;font-weight:600;letter-spacing:1px;color:var(--txt);margin-bottom:4px;min-height:26px;cursor:pointer}
+  #dish-name:hover{color:var(--gold2)}
+  #dish-sub{font-size:11px;color:var(--muted);margin-bottom:14px}
+  #score-wrap{text-align:center;padding:12px;background:var(--panel2);border-radius:12px;margin-bottom:14px;border:1px solid var(--line)}
+  #score{font-family:var(--serif);font-size:44px;font-weight:700;line-height:1;color:var(--gold2)}
+  #score-lbl{font-size:10px;letter-spacing:1px;color:var(--muted);margin-top:2px}
+  #stars{font-size:13px;margin-top:6px;letter-spacing:2px}
+  .layer{display:flex;align-items:center;gap:9px;padding:8px;margin:5px 0;border-radius:8px;background:var(--panel2);border:1px solid var(--line)}
+  .layer .dot{width:16px;height:16px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+  .layer .li-nm{flex:1;font-size:12.5px}
+  .layer .li-t{font-size:10px;color:var(--muted)}
+  .layer .tech-sel{font-size:10px;background:var(--bg);color:var(--gold2);border:1px solid var(--line);border-radius:6px;padding:2px 4px;max-width:96px}
+  .layer .rm{width:22px;height:22px;border-radius:50%;background:#000;color:var(--danger);border:1px solid var(--line);cursor:pointer;font-size:13px;line-height:1;flex:none}
+  .layer .rm:hover{background:var(--danger);color:#fff}
+  #notes{margin:12px 0;font-size:11.5px;line-height:1.6}
+  .note{padding:5px 8px;margin:3px 0;border-radius:6px;border-left:3px solid}
+  .note.ok{border-color:var(--ok);background:rgba(122,199,122,.08);color:#a8d8a8}
+  .note.warn{border-color:var(--warn);background:rgba(224,149,74,.08);color:#e8b884}
+  .note.avoid{border-color:var(--danger);background:rgba(224,106,90,.1);color:#e89888}
+  .note.tip{border-color:var(--info);background:rgba(122,154,208,.08);color:#a8bce0}
+  #ai-tip{font-size:12px;line-height:1.6;color:var(--gold2);min-height:18px;margin-top:8px;font-style:italic}
+  #radar-wrap{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px 8px 6px;margin-bottom:14px}
+  #radar-wrap .card-title{margin-bottom:4px}
+  #flavor-radar{display:flex;justify-content:center}
+  #flavor-radar svg{width:100%;max-width:240px;height:auto}
+  #critique{background:linear-gradient(180deg,rgba(200,161,90,.07),transparent);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;padding:11px 13px;margin-bottom:12px;display:none}
+  #critique.on{display:block}
+  #critique .cq-verdict{font-family:var(--serif);font-size:15px;color:var(--gold2);margin-bottom:6px}
+  #critique .cq-line{font-size:12px;line-height:1.65;color:var(--txt);margin:3px 0}
+  #critique .cq-line b{color:var(--gold2);font-weight:600}
+  #critique .cq-tag{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+  #card-actions{padding:12px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+
+  /* match modal */
+  #modal{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(4px)}
+  #modal.on{display:flex}
+  .modal-box{width:min(560px,92vw);max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,#17151a,#100f12);border:1px solid var(--gold);border-radius:16px;padding:28px;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+  .modal-box .mlabel{font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
+  .modal-box h2{font-family:var(--serif);font-size:28px;color:var(--gold2);margin:6px 0}
+  .modal-box .rest{font-size:13px;color:var(--txt);margin-bottom:2px}
+  .modal-box .meta{font-size:11px;color:var(--muted);margin-bottom:16px}
+  .modal-box .story{font-family:var(--serif);font-size:16px;line-height:1.7;color:var(--txt);border-left:2px solid var(--gold);padding-left:14px;margin:14px 0}
+  .modal-box .sim{font-size:12px;color:var(--muted);margin-top:14px}
+  .modal-box .close{margin-top:18px}
+  .badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);margin:2px}
+  .menu-list{margin-top:12px;display:flex;flex-direction:column;gap:2px}
+  .menu-row{display:flex;align-items:center;gap:12px;padding:12px 6px;border-bottom:1px solid var(--line)}
+  .menu-row .mr-main{flex:1;min-width:0}
+  .menu-row .mr-name{font-family:var(--serif);font-size:19px;color:var(--txt)}
+  .menu-row .mr-ing{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .menu-row .mr-meta{font-size:11px;color:var(--gold);margin-top:3px}
+  .menu-row .mr-btns{display:flex;gap:6px;flex:none}
+  .menu-row .mr-btns .btn{padding:5px 10px;font-size:11px}
+
+  /* B4: mobile / narrow-screen responsive */
+  #mobile-nav{display:none}
+  @media (max-width:820px){
+    html,body{overflow:auto;height:auto}
+    #app{display:block;height:auto}
+    header{position:sticky;top:0;flex-wrap:wrap;gap:6px;padding:8px 14px;height:auto}
+    header .brand{font-size:19px;letter-spacing:3px}
+    header .ctx{flex-wrap:wrap}
+    /* bottom tab bar to switch the three panels */
+    #mobile-nav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0e0d10;border-top:1px solid var(--line)}
+    #mobile-nav button{flex:1;padding:11px 0;background:none;border:none;color:var(--muted);font-size:12px;font-family:var(--sans);border-top:2px solid transparent}
+    #mobile-nav button.on{color:var(--gold2);border-top-color:var(--gold)}
+    #pantry,#stage,#card{border:none;border-bottom:1px solid var(--line)}
+    /* panel visibility driven by body[data-m] */
+    #pantry,#card{display:none}
+    #stage{display:flex;min-height:64vh}
+    body[data-m="pantry"] #pantry{display:flex} body[data-m="pantry"] #stage,body[data-m="pantry"] #card{display:none}
+    body[data-m="stage"] #stage{display:flex} body[data-m="stage"] #pantry,body[data-m="stage"] #card{display:none}
+    body[data-m="card"] #card{display:flex} body[data-m="card"] #stage,body[data-m="card"] #pantry{display:none}
+    #pantry,#card{max-height:calc(100vh - 108px)}
+    #stage-3d{min-height:52vh}
+    #card-scroll{padding-bottom:70px}
+    #pantry-list{padding-bottom:70px}
+    #flavor-radar svg{max-width:280px}
+    .modal-box{padding:20px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">FINE DINING LAB<small>分子级摆盘工坊 · 有据的创新</small></div>
+    <div class="ctx">
+      <span style="font-size:11px;color:var(--muted);margin-right:4px">时令</span>
+      <div id="season-chips" class="ctx"></div>
+    </div>
+  </header>
+
+  <!-- LEFT -->
+  <aside id="pantry">
+    <input id="search" placeholder="🔍 搜索食材 / 风味 / 出处…">
+    <div id="cat-filter"></div>
+    <div id="pantry-list"></div>
+  </aside>
+
+  <!-- CENTER -->
+  <main id="stage">
+    <div id="stage-3d">
+      <div id="stage-empty"><div class="big">空盘</div><div style="margin-top:8px;font-size:12px">从左侧素材库点选食材,开始你的创作</div></div>
+    </div>
+    <div id="ctrlbar">
+      <button class="btn" data-act="rotate">↻ 自动旋转</button>
+      <button class="btn" data-act="clear">清空重来</button>
+      <button class="btn" data-act="random">🎲 主厨随机灵感</button>
+      <button class="btn" data-act="demo">📖 加载名厨示范菜</button>
+      <button class="btn" data-act="menu">📔 我的菜单</button>
+      <span style="flex:1"></span>
+      <span id="layer-count" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div id="vessel-strip"></div>
+  </main>
+
+  <!-- RIGHT -->
+  <aside id="card">
+    <div id="card-scroll">
+      <div class="card-title">创作卡 · THE DISH</div>
+      <div id="dish-name">未命名之作</div>
+      <div id="dish-sub">点击命名 · 或让主厨随机生成</div>
+      <div id="score-wrap">
+        <div id="score">—</div>
+        <div id="score-lbl">合理性评分</div>
+        <div id="stars"></div>
+      </div>
+      <div id="radar-wrap">
+        <div class="card-title" style="font-size:12px">风味平衡 · FLAVOR PROFILE</div>
+        <div id="flavor-radar"></div>
+      </div>
+      <div id="critique"></div>
+      <div class="card-title" style="font-size:12px">层次 · LAYERS</div>
+      <div id="layers"></div>
+      <div id="notes"></div>
+      <div id="ai-tip"></div>
+    </div>
+    <div id="card-actions">
+      <button class="btn gold" data-act="ai">✨ 让 AI 给我灵感</button>
+      <button class="btn gold" data-act="match">🍽 找到最相近的名厨菜品</button>
+      <button class="btn" data-act="save">＋ 收进菜单</button>
+      <button class="btn" data-act="export-dish">⬇ 导出菜品图(手机版)</button>
+    </div>
+  </aside>
+</div>
+
+<!-- B4: mobile bottom nav -->
+<nav id="mobile-nav">
+  <button data-m="pantry">🧺 素材</button>
+  <button data-m="stage" class="on">🍽 摆盘</button>
+  <button data-m="card">📝 创作卡</button>
+</nav>
+
+<!-- match modal -->
+<div id="modal"><div class="modal-box" id="modal-body"></div></div>
+
+<script>
+/* =====================================================================
+   Fine Dining Lab — Screen-Print (halftone) art engine
+   Pure SVG-string generators. No canvas, no 3D. Every ingredient / vessel
+   returns an SVG <g> group of layered Ben-Day halftone screens, so the same
+   code renders the widget previews AND the final page.
+
+   Design language (approved sample):
+   - dark Michelin background, spotlight + focus vignette
+   - visible halftone dots; tone encoded by dot radius per screen
+   - limited elegant palette, off-register overprint, registration marks
+   ===================================================================== */
+(function (root) {
+  'use strict';
+
+  // ---- palette (screen-print inks) ----
+  const INK = {
+    paper:'#161310', plate:'#2a2622', plateWell:'#1b1815',
+    cream:'#efe3cf', creamDot:'#d8b98a',
+    gold:'#e5c07a',  goldDot:'#a9711f',
+    sear:'#c58a3a',  searDot:'#5e3212',
+    flesh:'#f0d9c4', fleshDot:'#c98f6a',
+    coral:'#e8927a', coralDot:'#a24634',
+    rose:'#e7b6bd',  roseDot:'#b06a72',
+    crimson:'#b5384a',crimsonDot:'#6e1622',
+    teal:'#2f5b52',  tealDot:'#4f8f82',
+    green:'#3f6f3a', greenDot:'#6aa martial',
+    olive:'#7a8a3a', oliveDot:'#4a5a1a',
+    ink:'#26262b',   inkDot:'#050506',
+    ivory:'#e8e2d2', ivoryDot:'#b8b09a',
+    amber:'#d8a24a', amberDot:'#8a5a1a',
+    beet:'#7a2a44',  beetDot:'#4a1226',
+    orange:'#e08840',orangeDot:'#9a4a12',
+    violet:'#6a4a7a', violetDot:'#3a2450'
+  };
+  // fix a typo-safe green dot
+  INK.greenDot = '#6aa84a';
+
+  // ---- halftone pattern registry: one <pattern> per (fill,dot,size,angle) ----
+  let _patSeq = 0;
+  const _patCache = new Map();
+  function halftone(fill, dot, size, angle) {
+    // resolve palette key names (e.g. 'cream','creamDot') to hex; pass through literal colors
+    fill = INK[fill] || fill;
+    dot  = INK[dot]  || dot;
+    const kkey = fill + '|' + dot + '|' + size + '|' + angle;
+    if (_patCache.has(kkey)) return _patCache.get(kkey);
+    const id = 'ht' + (_patSeq++);
+    const r = (size * 0.5 * 0.92).toFixed(2);
+    const c = (size / 2).toFixed(2);
+    const def =
+      `<pattern id="${id}" width="${size}" height="${size}" patternUnits="userSpaceOnUse" patternTransform="rotate(${angle})">` +
+      `<rect width="${size}" height="${size}" fill="${fill}"/>` +
+      `<circle cx="${c}" cy="${c}" r="${r}" fill="${dot}"/></pattern>`;
+    const rec = { id, def, url: `url(#${id})` };
+    _patCache.set(kkey, rec);
+    return rec;
+  }
+
+  // Collect all defs emitted so far (patterns + gradients + filters)
+  const _extraDefs = [];
+  function pushDef(s){ _extraDefs.push(s); }
+  function collectDefs() {
+    const pats = Array.from(_patCache.values()).map(p => p.def).join('');
+    return pats + _extraDefs.join('');
+  }
+  function resetDefs(){ _patCache.clear(); _extraDefs.length = 0; _patSeq = 0; }
+
+  // ---- helpers ----
+  // If `extra` already carries a fill= (e.g. stroke-only paths passing fill="none"),
+  // DON'T also emit the positional fill — a duplicate `fill` attribute makes strict
+  // SVG parsers reject the document, which breaks <img>/canvas export in the browser.
+  function _fillAttr(fill, extra){ return /(^|\s)fill\s*=/.test(extra) ? '' : `fill="${fill}"`; }
+  function ell(cx,cy,rx,ry,fill,extra=''){ return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" ${_fillAttr(fill,extra)} ${extra}/>`; }
+  function path(d,fill,extra=''){ return `<path d="${d}" ${_fillAttr(fill,extra)} ${extra}/>`; }
+  function circle(cx,cy,r,fill,extra=''){ return `<circle cx="${cx}" cy="${cy}" r="${r}" ${_fillAttr(fill,extra)} ${extra}/>`; }
+  // specular highlight arc, light from upper-left
+  function hi(cx,cy,rx,op=0.5){ return `<path d="M${cx-rx} ${cy} Q${cx} ${cy-rx*0.5} ${cx+rx} ${cy}" stroke="#fff5df" stroke-width="3" fill="none" opacity="${op}" stroke-linecap="round"/>`; }
+  // scatter of small filled dots (for grain / caviar sparkle / seeds)
+  function scatter(cx,cy,rx,ry,n,r,fill,seed=1){
+    let s=''; let x=seed*9301+49297;
+    const rnd=()=>{x=(x*9301+49297)%233280; return x/233280;};
+    for(let i=0;i<n;i++){const a=rnd()*6.283,rr=Math.sqrt(rnd());
+      const px=cx+Math.cos(a)*rx*rr, py=cy+Math.sin(a)*ry*rr;
+      s+=circle(px.toFixed(1),py.toFixed(1),(r*(0.7+rnd()*0.6)).toFixed(1),fill);}
+    return s;
+  }
+
+  root.FDL_ART = {
+    INK, halftone, collectDefs, resetDefs, pushDef,
+    _h:{ell,path,circle,hi,scatter}
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* =====================================================================
+   Fine Dining Lab — Ingredient art library (halftone screen-print)
+   One draw fn per ingredient id. Each returns an SVG <g> string, drawn
+   from the ingredient's REAL fine-dining reference (form / cut / colour),
+   centred at (0,0) in a ~ -60..60 local box; the page scales & places it.
+   Requires FDL_ART.
+   ===================================================================== */
+(function (root) {
+  'use strict';
+  const A = root.FDL_ART;
+  const { ell, path, circle, hi } = A._h;
+  const scatter = A._h.scatter;
+  const H = A.halftone, INK = A.INK;
+
+  function screen(d, fill, dot, size, angle, extra='') {
+    return path(d, H(fill, dot, size, angle).url, extra);
+  }
+  function screenEll(cx,cy,rx,ry, fill,dot,size,angle, extra=''){
+    return ell(cx,cy,rx,ry, H(fill,dot,size,angle).url, extra);
+  }
+  const g = (inner, tf='') => `<g ${tf?`transform="${tf}"`:''}>${inner}</g>`;
+
+  /* ---------- shared shape helpers ---------- */
+  function leaf(cx,cy,w,h,rot,inkName){
+    return g(screen(`M0 ${h/2} Q${-w/2} 0 0 ${-h/2} Q${w/2} 0 0 ${h/2} Z`,inkName,'greenDot',4,20)+
+             path(`M0 ${h/2} L0 ${-h/2}`,'#2a4a24','stroke-width="1" opacity=".5"'),`translate(${cx} ${cy}) rotate(${rot})`);
+  }
+  function leafSpray(fill,n,scale){
+    let s=`<path d="M0 20 Q2 0 0 -18" stroke="#2a4a24" stroke-width="1.5" fill="none" opacity=".6"/>`;
+    for(let i=0;i<n;i++){const side=i%2?1:-1,y=16-i*(30/n),len=10*scale;
+      s+=`<path d="M0 ${y} q${side*len} ${-len*0.6} ${side*len*1.3} ${-len}" stroke="${fill}" stroke-width="2" fill="none" opacity=".8"/>`;}
+    return s;
+  }
+  function flower(petal,center){
+    let s=''; for(let i=0;i<6;i++){const a=i*60;
+      s+=g(ell(0,-14,8,13,H('rose','roseDot',3,15).url,'opacity=".95"')+ell(0,-14,8,13,petal,'opacity=".35"'),`rotate(${a})`);}
+    return g(s+circle(0,0,6,center)+scatter(0,0,4,4,6,1,'#8a6a10',3));
+  }
+
+  const ART = {};
+
+  /* ---------------- SEAFOOD ---------------- */
+  ART.scallop = () => g(
+    ell(2,10,44,20,'#0c0a08','opacity=".5"') +
+    screenEll(0,4,46,20,'cream','creamDot',6,15) +
+    screenEll(0,-8,42,15,'sear','searDot',5,15) +
+    hi(-8,-12,26,0.55) +
+    path('M-30 -8 Q0 -16 30 -8','#4a2810','stroke-width="2" fill="none" opacity=".5"') +
+    path('M-24 -3 Q0 -9 24 -3','#5e3414','stroke-width="1.4" fill="none" opacity=".4"')
+  );
+  ART.oyster = () => g(
+    path('M-52 6 Q-58 -20 -20 -26 Q40 -32 52 -4 Q56 16 20 22 Q-38 28 -52 6 Z','#0c0a08','opacity=".45" transform="translate(3 6)"') +
+    screen('M-52 4 Q-58 -22 -20 -28 Q40 -34 52 -6 Q56 14 20 20 Q-38 26 -52 4 Z','ivory','ivoryDot',7,10) +
+    screenEll(2,-2,34,15,'cream','creamDot',5,10) +
+    screenEll(6,-2,20,10,'flesh','fleshDot',4,10) +
+    hi(-2,-8,16,0.5)
+  );
+  ART.uni = () => {
+    let t='';
+    const tongues=[[-22,0,-12],[-2,-4,4],[18,2,16],[6,10,-6]];
+    for(const[tx,ty,rot] of tongues){
+      t+=g(screen('M-14 0 Q-16 -12 0 -16 Q16 -12 14 0 Q10 8 0 9 Q-10 8 -14 0 Z','orange','orangeDot',4,15)+hi(-3,-8,8,0.5),`translate(${tx} ${ty}) rotate(${rot})`);
+    }
+    return g(ell(0,8,40,10,'#141210')+screenEll(0,7,38,9,'ink','inkDot',6,0)+t);
+  };
+  ART.langoustine = () => {
+    let seg='';
+    for(let i=0;i<6;i++){const a=-0.5+i*0.28,cx=Math.cos(a)*36,cy=-16+Math.sin(a)*30;
+      seg+=g(screenEll(0,0,13-i,9-i*0.6,'coral','coralDot',4,20)+hi(-2,-3,7,0.4),`translate(${cx} ${cy}) rotate(${a*57})`);}
+    return g(seg+path('M28 -44 q18 -10 26 4','#a24634','stroke-width="3" fill="none" opacity=".6"'));
+  };
+  ART.turbot = () => g(
+    ell(2,8,46,14,'#0c0a08','opacity=".4"') +
+    screen('M-48 2 Q-40 -14 0 -14 Q46 -14 48 2 Q44 12 0 12 Q-44 12 -48 2 Z','ivory','ivoryDot',6,0) +
+    path('M-36 -2 Q0 -6 40 -2','#cfc6b2','stroke-width="1.4" fill="none" opacity=".5"') +
+    path('M-30 4 Q0 1 34 4','#cfc6b2','stroke-width="1.2" fill="none" opacity=".4"') + hi(-6,-8,22,0.4)
+  );
+  ART.king_crab = () => {
+    let s=''; for(let i=0;i<4;i++){const x=-30+i*20;
+      s+=screenEll(x,0,11,20,'crimson','crimsonDot',5,80)+ell(x+10,0,3,18,'#e8d8c0','opacity=".5"');}
+    return g(s+hi(-20,-12,28,0.35));
+  };
+  ART.abalone = () => g(
+    // squarish muscle block with wavy frilled skirt + cross-hatch score on top face
+    path('M-34 12 Q-38 -6 -30 -14 Q-10 -20 8 -18 Q30 -16 36 -4 Q40 10 30 16 Q10 22 -12 20 Q-30 18 -34 12 Z','#0c0a08','opacity=".4" transform="translate(3 6)"')+
+    screen('M-34 10 Q-40 -2 -34 -12 L-24 -16 Q-22 -12 -14 -15 Q-6 -18 2 -15 Q10 -18 18 -14 Q26 -17 30 -12 L36 -6 Q40 6 32 14 Q10 20 -12 18 Q-30 16 -34 10 Z','ivory','ivoryDot',6,20)+
+    path('M-20 -8 L-8 12 M-6 -12 L4 12 M10 -11 L18 10 M-30 0 L34 -2','#8a7a4a','stroke-width="1" opacity=".55" fill="none"')+ // cross score + grain
+    hi(-8,-8,20,0.4)
+  );
+  ART.amaebi = () => {
+    // curled hook body, segmented, tapering head end + tail fan
+    let seg='';
+    for(let i=0;i<7;i++){const a=-1.1+i*0.32, cx=Math.cos(a)*30, cy=8-Math.sin(a)*30;
+      const rr=11-i*1.1;
+      seg+=g(screenEll(0,0,rr,rr*0.78,'rose','roseDot',3,20)+
+             path(`M${-rr} 0 Q0 ${-rr*0.5} ${rr} 0`,'#b06a72','stroke-width="0.8" fill="none" opacity=".5"'),
+             `translate(${cx} ${cy}) rotate(${a*57})`);}
+    // tail fan at last segment (top), tapering tip head at bottom
+    return g(seg+
+      path('M20 -30 l10 -12 l4 10 l8 -6 l-2 12 Z','#e79aa4','opacity=".9"')+ // tail fan
+      circle(-22,32,2,'#3a2020')+ // eye/head tip
+      hi(-6,4,14,0.5));
+  };
+  ART.eel_unagi = () => g(
+    // lacquered kabayaki bar — rectangular fillet, rounded ends, char grill lines
+    screen('M-48 -9 Q-52 -9 -52 -3 L-52 3 Q-52 9 -46 9 L46 9 Q52 9 52 3 L52 -3 Q52 -9 46 -9 Z','amber','amberDot',5,8)+
+    path('M-38 -9 L-34 9 M-24 -9 L-20 9 M-10 -9 L-6 9 M4 -9 L8 9 M18 -9 L22 9 M32 -9 L36 9','#3a1e08','stroke-width="2" opacity=".55"')+ // grill char
+    hi(-14,-5,26,0.4)
+  );
+  ART.squid = () => g(
+    // open calamari ring — thick annulus, scored surface, gap at one side
+    screen('M-28 0 A28 15 0 1 1 26 -6 L18 -3 A20 10 0 1 0 -20 0 Z','ivory','ivoryDot',5,0)+
+    path('M-24 -6 L-20 -1 M-10 -9 L-8 -3 M4 -9 L4 -3 M16 -7 L14 -2','#cfc6b2','stroke-width="1" opacity=".5"')+
+    hi(-8,-6,16,0.4)
+  );
+  ART.sea_bream = () => g(
+    // angled sashimi slice — trapezoid, thick end to thin edge, silver skin line
+    screen('M-42 8 L-30 -12 Q0 -14 40 -8 L34 10 Q-6 14 -42 8 Z','flesh','fleshDot',5,0)+
+    path('M-30 -12 Q0 -14 40 -8','#c8d0d8','stroke-width="2.5" fill="none" opacity=".65"')+ // silver skin
+    path('M-24 0 Q6 -3 30 1','#d8b0a0','stroke-width="1" fill="none" opacity=".5"')+ // muscle line
+    hi(-10,-4,20,0.4)
+  );
+  ART.anchovy = () => g(
+    // slim curved fillet strip — wide head end tapering to tail point, spine line
+    screen('M-42 2 Q-44 -4 -36 -6 Q-10 -9 26 -6 Q44 -4 48 2 Q30 5 -6 5 Q-38 6 -42 2 Z','ivory','ivoryDot',4,8)+
+    path('M-38 -4 Q-6 -7 44 0','#8fa0b0','stroke-width="1.6" fill="none" opacity=".6"')+ // silver back
+    path('M-34 1 L44 1','#5a6a30','stroke-width="1" opacity=".5"')+ // marinade line
+    circle(-36,-1,1.6,'#3a3a30')
+  );
+
+  /* ---------------- GARNISH ---------------- */
+  ART.caviar = () => g(
+    ell(0,4,34,15,'#141216') +
+    scatter(0,0,32,13,46,3.4,H('ink','inkDot',5,15).url,3) +
+    scatter(-2,-3,24,9,26,3.2,'#1a1a20',7) +
+    scatter(-4,-4,22,8,14,1.1,'#fffbe8',11)
+  );
+  ART.black_truffle = () => g(
+    screenEll(0,0,26,24,'ink','inkDot',5,15)+
+    path('M-16 -8 Q0 0 16 -6 M-12 6 Q2 10 14 4','#4a4038','stroke-width="1" opacity=".5" fill="none"')+
+    scatter(0,0,22,20,30,1,'#3a3228',5)+hi(-8,-10,14,0.3)
+  );
+  ART.white_truffle = () => g(
+    screen('M-26 4 Q-30 -16 -6 -20 Q22 -24 28 -4 Q30 14 6 18 Q-20 22 -26 4 Z','ivory','ivoryDot',5,20)+
+    scatter(0,-2,22,16,24,1.2,'#c8bfa8',9)+hi(-8,-8,16,0.4)
+  );
+  ART.dill = () => g( leafSpray('#3f6f3a',10,0.9) );
+  ART.basil = () => g( leaf(0,0,16,22,-10,'green')+leaf(-12,4,13,18,-40,'green')+leaf(12,2,13,18,20,'green') );
+  ART.edible_flower = () => flower('#d98cae','#f2d24a');
+  ART.nasturtium = () => flower('#e07a2a','#e5c07a');
+  ART.micro_herb = () => g( leafSpray('#4a7a3a',6,0.6) );
+  ART.gold_leaf = () => g(
+    screen('M-20 -8 L-4 -14 L18 -6 L14 10 L-8 14 L-22 4 Z','gold','goldDot',3,15)+
+    path('M-20 -8 L14 10 M-4 -14 L-8 14','#fff2c0','stroke-width="1" opacity=".7"')+hi(-6,-6,14,0.7)
+  );
+  ART.charcoal_oil = () => g( scatter(0,0,30,12,10,4,'#0a0a0c',3)+scatter(0,0,26,10,10,1,'#3a3a44',7) );
+
+  /* ---------------- MEAT ---------------- */
+  ART.wagyu = () => g(
+    ell(2,8,44,14,'#0c0a08','opacity=".4"')+
+    screen('M-46 2 Q-40 -14 0 -14 Q46 -14 46 2 Q40 12 0 12 Q-42 12 -46 2 Z','crimson','crimsonDot',5,0)+
+    path('M-38 -6 Q-10 -10 30 -4 M-30 4 Q0 0 34 6 M-20 -2 Q6 -4 24 0','#e8dcc8','stroke-width="1.4" fill="none" opacity=".7"')+
+    path('M-46 2 Q-40 -14 0 -14','#3a1810','stroke-width="3" fill="none" opacity=".6"')+hi(-8,-8,22,0.35)
+  );
+  ART.squab = () => g(
+    screen('M-40 2 Q-34 -14 0 -14 Q40 -12 42 4 Q34 12 0 12 Q-36 12 -40 2 Z','rose','roseDot',5,0)+
+    path('M-40 2 Q-34 -14 0 -14 Q40 -12 42 4','#7a3020','stroke-width="3" fill="none" opacity=".55"')+hi(-8,-6,20,0.4)
+  );
+  ART.iberico = () => g(
+    screen('M-46 0 Q-20 -12 20 -10 Q46 -8 44 6 Q10 14 -30 12 Q-48 10 -46 0 Z','crimson','crimsonDot',4,0)+
+    path('M-38 -2 Q0 -6 38 0 M-30 6 Q4 2 36 8','#f0e4d0','stroke-width="1.6" fill="none" opacity=".7"')
+  );
+  ART.lamb = () => g(
+    screenEll(0,0,40,17,'rose','roseDot',5,0)+
+    ell(0,0,40,17,'none','stroke="#7a3020" stroke-width="3" opacity=".5"')+hi(-8,-6,20,0.4)
+  );
+  ART.foie_gras = () => g(
+    ell(2,8,40,14,'#0c0a08','opacity=".4"')+
+    screen('M-42 4 Q-38 -14 0 -14 Q42 -12 42 4 Q36 14 0 14 Q-40 14 -42 4 Z','gold','goldDot',5,10)+
+    screenEll(0,-6,34,9,'sear','searDot',4,10)+hi(-8,-10,22,0.5)+
+    path('M-30 -8 Q0 -14 30 -8','#5e3212','stroke-width="1.6" fill="none" opacity=".5"')
+  );
+  ART.duck = () => g(
+    screen('M-42 4 Q-36 -12 0 -12 Q42 -10 42 6 Q34 14 0 14 Q-38 14 -42 4 Z','rose','roseDot',5,0)+
+    ell(0,-8,40,6,H('amber','amberDot',4,10).url)+
+    path('M-24 -10 L-20 -6 M-8 -11 L-4 -7 M8 -11 L12 -7 M22 -10 L26 -6','#6a4010','stroke-width="1.2" opacity=".6"')
+  );
+  ART.veal_sweetbread = () => g(
+    screen('M-30 6 Q-34 -14 -6 -18 Q26 -22 32 -2 Q34 16 4 18 Q-24 20 -30 6 Z','sear','searDot',5,15)+
+    scatter(0,-2,24,14,18,1.2,'#3a1e08',5)+hi(-8,-8,16,0.5)
+  );
+  ART.venison = () => g(
+    screenEll(0,0,40,16,'beet','beetDot',5,0)+ell(0,0,40,16,'none','stroke="#2a0e18" stroke-width="3" opacity=".5"')+hi(-8,-6,18,0.35)
+  );
+  ART.beef_tartare = () => g(
+    scatter(0,0,30,14,20,4.5,H('crimson','crimsonDot',4,0).url,3)+
+    scatter(0,-2,24,10,10,3,'#7a1e2a',7)
+  );
+
+  /* ---------------- VEGETABLE (each a real silhouette) ---------------- */
+  ART.white_asparagus = () => g( // long pale spear, pointed bud tip, faint scales
+    screen('M-4 40 L-4 -30 Q-4 -42 0 -44 Q4 -42 4 -30 L4 40 Z','ivory','ivoryDot',4,90)+
+    path('M-4 -30 Q0 -34 4 -30 M-4 -22 Q0 -26 4 -22 M-4 -14 Q0 -18 4 -14','#c8bfa0','stroke-width="1" fill="none" opacity=".6"')+
+    path('M0 40 L0 -30','#e8e0cc','stroke-width="1" opacity=".4"')+hi(-2,-20,4,0.5)
+  );
+  ART.heirloom_tomato = () => g( // round fluted tomato with stem star
+    screenEll(0,2,34,30,'crimson','crimsonDot',5,0)+
+    path('M-30 0 Q-24 -14 -30 -24 M-14 -8 Q-12 -22 -18 -30 M2 -10 Q4 -24 0 -32 M18 -8 Q22 -22 16 -28 M30 0 Q28 -14 32 -24','#8a1e2a','stroke-width="1" fill="none" opacity=".35"')+ // flutes
+    g('<path d="M-6 -28 l-8 -6 M0 -30 l0 -9 M6 -28 l8 -6 M-3 -29 l-3 -8 M3 -29 l4 -7" stroke="#4a6a2a" stroke-width="2" fill="none"/>','')+ // stem star
+    hi(-10,-12,16,0.5)
+  );
+  ART.beetroot = () => g( // round bulb, dark ruby, taproot + rings
+    screen('M-28 4 Q-32 -18 -8 -24 Q22 -30 30 -6 Q34 16 8 22 Q-22 26 -28 4 Z','beet','beetDot',5,0)+
+    path('M8 22 q2 12 -2 20','#6a2a44','stroke-width="2" fill="none" opacity=".6"')+ // taproot
+    path('M-18 0 Q0 -6 20 -2','#4a1226','stroke-width="1" fill="none" opacity=".4"')+hi(-8,-8,14,0.4)
+  );
+  ART.green_pea = () => g( // cluster of small bright spheres in a pod hint
+    (function(){let s='';const pos=[[-16,4],[-4,-2],[8,2],[18,6],[-8,10],[4,12]];
+      for(const[x,y] of pos)s+=screenEll(x,y,8,8,'olive','oliveDot',3,0)+circle(x-2,y-2,2,'#c8e88a','opacity=".6"');
+      return s+path('M-24 8 Q0 -14 26 10','#4a5a1a','stroke-width="2" fill="none" opacity=".5"');})()
+  );
+  ART.celeriac = () => g( // knobbly pale root ball
+    screen('M-28 6 Q-34 -14 -12 -22 Q16 -30 30 -10 Q38 12 14 22 Q-18 28 -28 6 Z','ivory','ivoryDot',5,20)+
+    A._h.scatter(0,0,24,18,18,1.4,'#b8ae90',5)+
+    path('M-20 -6 Q0 2 22 -6','#a89a78','stroke-width="1" fill="none" opacity=".4"')+hi(-8,-8,16,0.4)
+  );
+  ART.carrot = () => g( // tapered heirloom carrot, ridged, green top hint
+    screen('M-6 -34 Q-8 10 -2 38 Q2 42 6 38 Q10 8 6 -34 Q0 -40 -6 -34 Z','orange','orangeDot',4,80)+
+    path('M-4 -20 Q0 -18 4 -20 M-4 -6 Q0 -4 4 -6 M-3 8 Q0 10 3 8 M-3 22 Q0 24 3 22','#9a4a12','stroke-width="1" fill="none" opacity=".5"')+
+    path('M0 -34 l-6 -10 M0 -34 l0 -12 M0 -34 l6 -10','#4a6a2a','stroke-width="2" fill="none"')+hi(-3,-10,4,0.4)
+  );
+  ART.corn = () => g( // grilled corn kernels in rows on cob segment
+    screen('M-14 34 Q-18 -30 0 -36 Q18 -30 14 34 Q0 40 -14 34 Z','amber','amberDot',3,0)+
+    (function(){let s='';for(let r=0;r<7;r++)for(let c=-2;c<=2;c++){const y=-28+r*9,x=c*6.5;
+      s+=circle(x,y,2.6,'#e0b048','opacity=".8"')+circle(x-0.6,y-0.6,0.9,'#fff0c0','opacity=".5"');}return s;})()
+  );
+  ART.potato = () => g( // fondant potato — cylindrical, browned top/bottom edges
+    screen('M-26 -12 Q-28 -16 -22 -16 L22 -16 Q28 -16 26 -12 L26 12 Q28 16 22 16 L-22 16 Q-28 16 -26 12 Z','cream','creamDot',5,0)+
+    ell(0,-14,24,4,H('sear','searDot',3,10).url)+ell(0,14,24,4,H('sear','searDot',3,10).url,'opacity=".7"')+hi(-8,-6,18,0.4)
+  );
+  ART.cauliflower = () => g( // roasted floret — bumpy dome on stalk
+    A._h.scatter(0,-4,28,20,40,4.5,H('cream','creamDot',3,0).url,4)+
+    A._h.scatter(0,-6,22,14,20,3,'#e8dcc0',8)+
+    path('M-6 16 L-4 30 M6 16 L4 30','#c8bfa0','stroke-width="3" opacity=".6"')+ // stalk
+    ell(0,-6,10,7,'#f0e8d0','opacity=".3"')
+  );
+  ART.cabbage = () => g( // charred hispi wedge — layered leaves, dark grilled edge
+    screen('M-30 16 L-8 -20 Q0 -24 8 -20 L30 16 Q0 24 -30 16 Z','olive','oliveDot',5,10)+
+    path('M-8 -20 L-2 14 M0 -22 L0 16 M8 -20 L2 14 M-18 0 L-6 12 M18 0 L6 12','#3a4a1a','stroke-width="1.2" fill="none" opacity=".6"')+
+    path('M-30 16 Q0 24 30 16','#1a2a0a','stroke-width="3" fill="none" opacity=".6"')+hi(-8,-8,16,0.35)
+  );
+
+  /* ---------------- FUNGI ---------------- */
+  ART.matsutake = () => g( // distinct cap + thick stem, sliced lengthwise
+    screen('M-22 -8 Q-24 -22 0 -24 Q24 -22 22 -8 Q0 -2 -22 -8 Z','sear','searDot',4,10)+ // cap
+    screen('M-8 -6 L-10 30 Q0 34 10 30 L8 -6 Q0 -2 -8 -6 Z','cream','creamDot',4,90)+ // stem
+    path('M-8 6 Q0 8 8 6 M-9 18 Q0 20 9 18','#c8bfa0','stroke-width="1" fill="none" opacity=".5"')+hi(-8,-16,14,0.4)
+  );
+  ART.porcini = () => g( // fat domed brown cap + bulbous pale stem
+    screen('M-26 -6 Q-28 -24 0 -26 Q28 -24 26 -6 Q0 2 -26 -6 Z','sear','searDot',5,10)+
+    screen('M-12 -4 Q-16 24 -6 30 Q0 32 6 30 Q16 24 12 -4 Q0 2 -12 -4 Z','cream','creamDot',5,90)+
+    hi(-10,-16,16,0.5)
+  );
+  ART.morel = () => g( // conical honeycomb-pitted cap on short stem
+    screen('M-14 -6 Q-18 -34 0 -38 Q18 -34 14 -6 Q0 0 -14 -6 Z','sear','searDot',3,0)+
+    (function(){let s='';for(let r=0;r<6;r++)for(let c=-2;c<=2;c++){const y=-34+r*6,x=c*5*(1-r*0.08);
+      s+=`<path d="M${x} ${y} l3 2 l-1 4 l-4 0 l-1 -4 Z" fill="#2a1808" opacity=".5"/>`;}return s;})()+
+    screen('M-6 -6 L-7 12 Q0 16 7 12 L6 -6 Z','ivory','ivoryDot',3,90)
+  );
+  ART.chanterelle = () => g( // trumpet — flaring wavy funnel, golden
+    screen('M-18 -18 Q-22 -20 -16 -22 Q0 -26 16 -22 Q22 -20 18 -18 Q10 -14 12 8 Q6 30 0 32 Q-6 30 -12 8 Q-10 -14 -18 -18 Z','amber','amberDot',4,10)+
+    path('M-14 -18 Q0 -10 14 -18 M-8 0 L-6 24 M8 0 L6 24','#8a5a1a','stroke-width="1" fill="none" opacity=".5"')+hi(-8,-16,14,0.4)
+  );
+
+  /* ---------------- ACID ---------------- */
+  ART.yuzu = () => g( // knobbly citrus with dimpled skin + stem leaf
+    screen('M-26 6 Q-30 -16 -6 -22 Q22 -28 30 -4 Q34 18 8 24 Q-20 28 -26 6 Z','gold','goldDot',4,10)+
+    A._h.scatter(0,0,24,18,30,0.9,'#b8901f',5)+ // dimples
+    path('M14 -20 q10 -8 4 -16','#4a6a2a','stroke-width="2" fill="none"')+hi(-8,-8,14,0.5)
+  );
+  ART.green_apple = () => g( // classic apple silhouette with dimple top+stem
+    screen('M0 -22 Q-22 -26 -26 -2 Q-30 20 -10 26 Q0 28 10 26 Q30 20 26 -2 Q22 -26 0 -22 Z','olive','oliveDot',5,0)+
+    path('M0 -22 Q-2 -28 -6 -30 M0 -22 Q2 -30 0 -34','#5a3a12','stroke-width="2" fill="none"')+ // stem
+    hi(-10,-10,16,0.55)
+  );
+  ART.rhubarb = () => g( // long pink-red stalk, fibrous, cut ends
+    screen('M-6 -34 L-6 34 Q0 38 6 34 L6 -34 Q0 -38 -6 -34 Z','coral','coralDot',4,90)+
+    path('M0 -34 L0 34','#a24634','stroke-width="1" opacity=".5"')+
+    path('M-4 -32 Q0 -30 4 -32','#7a2a20','stroke-width="1.5" fill="none" opacity=".6"')+hi(-3,-10,4,0.4)
+  );
+  ART.sea_buckthorn = () => g( // cluster of tiny bright orange berries
+    (function(){let s='';const pos=[[-14,2],[-4,-6],[6,0],[16,6],[-8,10],[4,10],[12,-6],[0,6]];
+      for(const[x,y] of pos)s+=screenEll(x,y,6,6,'orange','orangeDot',2,0)+circle(x-1.5,y-1.5,1.5,'#ffd070','opacity=".7"');return s;})()
+  );
+  ART.lime = () => g( // half lime — wheel with segments
+    screenEll(0,0,26,26,'olive','oliveDot',4,0)+
+    ell(0,0,22,22,'#d8e8b0','opacity=".25"')+
+    (function(){let s='';for(let i=0;i<8;i++)s+=`<path d="M0 0 L${Math.cos(i*45*Math.PI/180)*20} ${Math.sin(i*45*Math.PI/180)*20}" stroke="#e8f0c8" stroke-width="1.5" opacity=".5"/>`;return s;})()+
+    circle(0,0,3,'#c8d8a0')+hi(-8,-8,12,0.4)
+  );
+
+  /* ---------------- FRUIT ---------------- */
+  ART.passion_fruit = () => g( // halved — purple shell, golden seedy pulp
+    screenEll(0,0,26,24,'violet','violetDot',4,0)+
+    screenEll(0,0,20,18,'amber','amberDot',3,0)+
+    A._h.scatter(0,0,16,14,16,2,'#2a2010',5)+ // dark seeds
+    ell(0,0,20,18,'none','stroke="#3a2450" stroke-width="3" opacity=".6"')+hi(-8,-8,12,0.4)
+  );
+  ART.strawberry = () => g( // classic heart-cone with seed dots + calyx
+    screen('M0 30 Q-22 20 -20 -6 Q-18 -20 0 -22 Q18 -20 20 -6 Q22 20 0 30 Z','crimson','crimsonDot',4,0)+
+    A._h.scatter(0,0,16,20,20,1,'#f0e0a0',5)+ // seeds
+    g('<path d="M-10 -20 l-8 -6 M0 -22 l0 -9 M10 -20 l8 -6 M-4 -21 l-3 -8 M4 -21 l4 -7" stroke="#4a6a2a" stroke-width="2.5" fill="none"/>')+hi(-8,-8,14,0.5)
+  );
+  ART.cherry = () => g( // two round cherries on stems
+    screenEll(-10,6,14,14,'crimson','crimsonDot',4,0)+screenEll(12,10,13,13,'crimson','crimsonDot',4,0)+
+    path('M-10 -8 Q-4 -22 4 -26 M12 -3 Q8 -20 4 -26','#5a3a12','stroke-width="1.5" fill="none"')+
+    circle(-14,2,3,'#f0b0b0','opacity=".6"')+circle(8,6,3,'#f0b0b0','opacity=".6"')
+  );
+  ART.fig = () => g( // halved fig — teardrop, pink seedy center, purple skin
+    screen('M0 -26 Q-20 -22 -22 2 Q-24 22 0 30 Q24 22 22 2 Q20 -22 0 -26 Z','violet','violetDot',4,0)+
+    screen('M0 -18 Q-12 -14 -13 4 Q-14 18 0 24 Q14 18 13 4 Q12 -14 0 -18 Z','rose','roseDot',3,0)+
+    A._h.scatter(0,2,10,12,20,1,'#b04a5a',5)+hi(-8,-10,12,0.4)
+  );
+  ART.grape = () => g( // small cluster of dusty spheres
+    (function(){let s='';const pos=[[0,-14],[-10,-4],[10,-4],[-6,6],[6,6],[0,-2],[-2,16],[8,14]];
+      for(const[x,y] of pos)s+=screenEll(x,y,8,8,'violet','violetDot',3,0)+circle(x-2,y-2,2,'#b0a0c8','opacity=".5"');return s;})()
+  );
+
+  /* ---------------- DAIRY ---------------- */
+  ART.parmesan = () => g( // triangular wedge, granular pale gold
+    screen('M-28 16 L20 -18 Q26 -20 26 -12 L10 18 Q-28 22 -28 16 Z','cream','creamDot',4,10)+
+    A._h.scatter(-2,4,20,10,24,0.8,'#c8b888',5)+
+    path('M-28 16 L20 -18','#a89a68','stroke-width="1.5" fill="none" opacity=".4"')+hi(-6,-4,14,0.4)
+  );
+  ART.burrata = () => g( // soft white ball with torn creamy top
+    screenEll(0,2,28,26,'ivory','ivoryDot',6,0)+
+    path('M-14 -12 Q0 -22 14 -12 Q8 -6 0 -8 Q-8 -6 -14 -12 Z','#f6f0e2','opacity=".7"')+ // torn opening
+    ell(0,-14,12,5,'#f0e8d8','opacity=".5"')+hi(-10,-8,18,0.6)
+  );
+  ART.egg_yolk = () => g( // glossy orange dome yolk
+    screenEll(0,0,22,20,'orange','orangeDot',4,0)+
+    ell(-6,-6,10,8,'#ffd86a','opacity=".6"')+circle(-8,-8,4,'#fff0c0','opacity=".7"')
+  );
+  ART.goat_cheese = () => g( // cylindrical log slice, chalky white, rind edge
+    screen('M-24 -14 Q-26 -16 -20 -16 L20 -16 Q26 -16 24 -14 L24 14 Q26 16 20 16 L-20 16 Q-26 16 -24 14 Z','ivory','ivoryDot',5,0)+
+    path('M-24 -14 L-24 14 M24 -14 L24 14','#d8cfb8','stroke-width="2" opacity=".5"')+
+    ell(0,0,18,12,'#f0ead8','opacity=".3"')+hi(-8,-6,16,0.4)
+  );
+
+  /* ---------------- GRAIN ---------------- */
+  ART.risotto_rice = () => g( // creamy mound of short grains
+    ell(0,4,32,16,'#0c0a08','opacity=".3"')+
+    screenEll(0,0,32,18,'cream','creamDot',4,0)+
+    (function(){let s='';const seed=3;let x=seed*9301+49297;const rnd=()=>{x=(x*9301+49297)%233280;return x/233280;};
+      for(let i=0;i<40;i++){const a=rnd()*6.28,rr=Math.sqrt(rnd());const px=Math.cos(a)*28*rr,py=Math.sin(a)*14*rr;
+      s+=`<ellipse cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" rx="3" ry="1.6" transform="rotate(${(rnd()*180).toFixed(0)} ${px.toFixed(1)} ${py.toFixed(1)})" fill="#e8dcc0" opacity=".7"/>`;}return s;})()
+  );
+  ART.buckwheat = () => g( // scatter of dark angular groats
+    ell(0,3,30,14,'#0c0a08','opacity=".3"')+
+    (function(){let s='';let x=7*9301+49297;const rnd=()=>{x=(x*9301+49297)%233280;return x/233280;};
+      for(let i=0;i<34;i++){const a=rnd()*6.28,rr=Math.sqrt(rnd());const px=Math.cos(a)*28*rr,py=Math.sin(a)*13*rr;
+      s+=`<path d="M${px} ${py} l3 1 l-1 3 l-3 -1 Z" fill="#6a5230" opacity=".85"/>`;}return s;})()
+  );
+  ART.koji_rice = () => g( // fluffy pale cultured rice clump, downy
+    screenEll(0,0,30,18,'ivory','ivoryDot',5,0)+
+    A._h.scatter(0,0,26,14,30,1.4,'#f0ead6',5)+
+    A._h.scatter(0,-3,20,9,14,0.9,'#fffaf0',9)+hi(-8,-6,16,0.4)
+  );
+
+  /* ---------------- SPICE ---------------- */
+  ART.saffron = () => g( // few crimson thread strands
+    path('M-18 -12 Q-6 0 -14 16 M-2 -16 Q6 -2 -2 18 M12 -14 Q4 2 16 14','#b5384a','stroke-width="2.5" fill="none" opacity=".9" stroke-linecap="round"')+
+    path('M-18 -12 Q-6 0 -14 16 M-2 -16 Q6 -2 -2 18','#e0704a','stroke-width="1" fill="none" opacity=".6" stroke-linecap="round"')
+  );
+  ART.vanilla = () => g( // split pod — long dark bean, tiny seed specks
+    screen('M-34 -5 Q-38 -6 -34 -8 Q0 -12 34 -8 Q38 -6 34 -5 Q0 0 -34 -5 Z','ink','inkDot',3,6)+
+    path('M-30 -6 Q0 -9 30 -6','#4a3020','stroke-width="3" fill="none" opacity=".7"')+ // split
+    A._h.scatter(0,-6,28,2,30,0.6,'#050505',5)+hi(-10,-7,20,0.3)
+  );
+
+  /* ---------------- SAUCE (organic pools / swooshes) ---------------- */
+  function swoosh(fill,dot,size,angle){
+    return screen('M-46 6 C -30 20, 30 20, 48 -2 C 30 14, -20 16, -40 8 Z',fill,dot,size,angle)+
+           path('M-44 6 C -28 18, 28 18, 46 -2','#000','stroke-width="0" fill="none"');
+  }
+  ART.kombu_dashi = () => g( swoosh('teal','tealDot',6,10)+ell(-6,4,30,6,'#3f6f66','opacity=".2"') );
+  ART.brown_butter = () => g( swoosh('amber','amberDot',5,10)+A._h.scatter(0,4,34,6,14,1,'#6a4010',5) );
+  ART.beurre_blanc = () => g( swoosh('cream','creamDot',5,10)+ell(-4,4,32,6,'#f0e8d0','opacity=".3"') );
+  ART.jus = () => g( swoosh('beet','beetDot',5,10)+path('M-40 6 C -24 16, 30 16, 44 -1','#2a0e18','stroke-width="1" fill="none" opacity=".4"') );
+  ART.salsa_verde = () => g( swoosh('olive','oliveDot',4,10)+A._h.scatter(0,4,34,6,16,1.2,'#2a4a1a',5)+A._h.scatter(0,3,28,5,8,1.4,'#8aca4a',9) );
+  ART.ponzu = () => g( swoosh('amber','amberDot',4,10)+ell(-4,4,30,5,'#5a3a10','opacity=".3"') );
+  ART.mole = () => g( swoosh('sear','searDot',5,10)+A._h.scatter(0,4,32,6,12,1,'#2a1808',5) );
+  ART.tigers_milk = () => g( swoosh('ivory','ivoryDot',4,10)+A._h.scatter(0,3,30,5,10,1.2,'#d8e0d0',7) );
+
+  /* ---------------- TEXTURE (crisps / powders) ---------------- */
+  ART.buckwheat_crisp = () => g( // irregular shard with holes
+    screen('M-30 8 L-22 -14 L4 -18 L26 -8 L20 14 L-8 18 Z','sear','searDot',4,15)+
+    circle(-6,0,3,'#161310')+circle(8,-4,2.4,'#161310')+circle(2,8,2,'#161310')+ // air holes
+    path('M-30 8 L-22 -14 L4 -18','#3a2410','stroke-width="1" fill="none" opacity=".5"')
+  );
+  ART.tuile = () => g( // thin curved wafer, translucent, ridged
+    screen('M-38 10 Q0 -22 38 8 Q0 2 -38 10 Z','cream','creamDot',3,10)+
+    path('M-34 8 Q0 -16 34 7','#d8c8a0','stroke-width="1" fill="none" opacity=".5"')+
+    path('M-20 4 Q0 -8 20 4','#c8b888','stroke-width="0.8" fill="none" opacity=".4"')+hi(-10,-4,18,0.5)
+  );
+  ART.nori_powder = () => g( // dark green-black dusting
+    (function(){let s='';let x=5*9301+49297;const rnd=()=>{x=(x*9301+49297)%233280;return x/233280;};
+      for(let i=0;i<60;i++){const a=rnd()*6.28,rr=Math.sqrt(rnd());const px=Math.cos(a)*30*rr,py=Math.sin(a)*10*rr;
+      s+=circle(px.toFixed(1),py.toFixed(1),(0.6+rnd()*1.2).toFixed(1),i%3?'#1a2a1a':'#2a3a20');}return s;})()
+  );
+
+  ART.short_rib = () => g(
+    ell(2,10,42,14,'#0c0a08','opacity=".45"')+
+    screen('M-42 -12 Q-46 -16 -40 -16 L40 -16 Q46 -16 42 -12 L42 12 Q46 16 40 16 L-40 16 Q-46 16 -42 12 Z','beet','beetDot',5,0)+
+    path('M-36 -8 Q0 -12 36 -6 M-34 0 Q0 -4 34 2 M-30 8 Q0 4 32 10','#3a1210','stroke-width="1.4" fill="none" opacity=".55"')+
+    ell(0,-14,40,5,H('sear','searDot',3,10).url)+hi(-10,-8,22,0.4)
+  );
+  ART.suckling_pig = () => g(
+    ell(2,10,40,13,'#0c0a08','opacity=".4"')+
+    screen('M-40 8 Q-42 -14 -30 -16 L30 -16 Q42 -14 40 8 Q0 16 -40 8 Z','cream','creamDot',5,0)+
+    screen('M-40 -8 Q-42 -18 -30 -18 L30 -18 Q42 -18 40 -8 Q0 -4 -40 -8 Z','sear','searDot',3,10)+
+    scatter(0,-13,34,4,26,1.1,'#3a1e08',5)+hi(-10,-14,20,0.5)
+  );
+  ART.quail = () => g(
+    screen('M-30 6 Q-34 -14 -8 -18 Q22 -22 30 -4 Q32 14 6 18 Q-24 20 -30 6 Z','sear','searDot',5,10)+
+    path('M-20 -6 Q0 -12 22 -4','#5e3212','stroke-width="1.6" fill="none" opacity=".5"')+
+    path('M18 8 l14 8 M22 4 l16 4','#c8a878','stroke-width="3" fill="none" opacity=".6"')+
+    hi(-8,-8,18,0.5)
+  );
+  ART.rabbit = () => g(
+    screenEll(0,0,34,30,'flesh','fleshDot',5,0)+
+    path('M0 0 m-22 0 a22 20 0 1 0 44 0 a22 20 0 1 0 -44 0','none','stroke="#c88a6a" stroke-width="2" opacity=".4"')+
+    path('M0 0 m-12 0 a12 11 0 1 0 24 0 a12 11 0 1 0 -24 0','none','stroke="#a86a4a" stroke-width="2" opacity=".4"')+
+    circle(0,0,4,'#8a4a34')+hi(-8,-8,16,0.45)
+  );
+  ART.bone_marrow = () => g(
+    screen('M-44 -10 Q-48 -16 -40 -16 L40 -16 Q48 -16 44 -10 L40 12 Q0 20 -40 12 Z','ivory','ivoryDot',6,0)+
+    screenEll(0,-2,34,9,'cream','creamDot',4,0)+
+    ell(-6,-4,20,5,'#f0e6cc','opacity=".5"')+hi(-10,-8,22,0.5)
+  );
+  ART.pork_jowl = () => g(
+    screen('M-42 -12 L42 -12 L42 12 L-42 12 Z','coral','coralDot',5,0)+
+    path('M-42 -6 L42 -6 M-42 0 L42 0 M-42 6 L42 6','#f0e0d0','stroke-width="3" opacity=".7"')+
+    path('M-42 -9 L42 -9 M-42 3 L42 3','#a2483a','stroke-width="2" opacity=".5"')+hi(-10,-6,22,0.4)
+  );
+
+  root.FDL_ING_ART = ART;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* =====================================================================
+   Fine Dining Lab — Vessel art library v3 (felt refinement pass)
+   Goal: detail that READS at plate scale under food + vignette.
+   Every round vessel gets a depth kit:
+     - thick bright rim arc (top) + dark cast arc (bottom) = real thickness
+     - deep inner well shadow = the food sits INSIDE, not on a decal
+     - broad soft specular reflection (light upper-left)
+     - a high-opacity MATERIAL SIGNATURE (hammer/glaze/ribs/pores/crackle)
+     - contact ambient occlusion ring where food meets the surface
+   Local frame: plate centred at (0,0), roughly -150..150 wide.
+   ===================================================================== */
+(function (root) {
+  'use strict';
+  const A = root.FDL_ART;
+  const { ell, path, circle, hi } = A._h;
+  const scatter = A._h.scatter;
+  const H = A.halftone;
+  function screen(d, fill, dot, size, angle, extra=''){ return path(d,H(fill,dot,size,angle).url,extra); }
+  function screenEll(cx,cy,rx,ry,fill,dot,size,angle,extra=''){ return ell(cx,cy,rx,ry,H(fill,dot,size,angle).url,extra); }
+  const g=(inner)=>`<g>${inner}</g>`;
+  const shadow=(rx,ry)=>ell(10,ry*0.38+12,rx*1.04,ry*0.4,'#000','opacity=".6"');
+
+  // --- depth kit pieces (stronger, meant to be visible) ---
+  // bright raised rim: a wide top highlight + a dark under-edge that reads as thickness
+  const rimLight=(rx,ry,light,dark)=>
+    `<path d="M${-rx} 0 A${rx} ${ry} 0 0 1 ${rx} 0" fill="none" stroke="${light}" stroke-width="4.5" opacity=".7"/>`+
+    `<path d="M${-rx} 2 A${rx} ${ry} 0 0 0 ${rx} 2" fill="none" stroke="${dark}" stroke-width="5" opacity=".55"/>`+
+    `<path d="M${-rx*0.9} -1 A${rx*0.9} ${ry*0.9} 0 0 1 ${rx*0.9} -1" fill="none" stroke="#ffffff" stroke-width="1.6" opacity=".45"/>`;
+  // deep well so food sits inside
+  const well=(rx,ry,depth=0.34)=>ell(0,ry*0.14,rx*0.84,ry*0.78,'#000',`opacity="${depth}"`);
+  // broad soft reflection
+  const sheen=(rx,ry)=>ell(-rx*0.28,-ry*0.34,rx*0.5,ry*0.24,'#ffffff','opacity=".14"');
+  // occlusion ring where plated food meets the surface
+  const contact=(rx,ry)=>ell(0,ry*0.06,rx*0.5,ry*0.34,'#000','opacity=".22"');
+
+  const V = {};
+
+  // slate — honed dark stone rect, mineral speckle + sheen band + bevel
+  V.slate = () => g(shadow(150,70)+
+    screen('M-150 -46 Q-152 -50 -146 -50 L146 -50 Q152 -50 150 -46 L150 46 Q152 50 146 50 L-146 50 Q-152 50 -150 46 Z','ink','inkDot',7,0)+
+    scatter(0,0,140,44,90,1.0,'#3a3a42',5)+scatter(0,0,120,38,34,0.6,'#5a5a64',9)+
+    path('M-146 -40 L146 -40','#6a6a76','stroke-width="2.5" fill="none" opacity=".4"')+ // top bevel light
+    path('M-146 44 L146 44','#000','stroke-width="3" fill="none" opacity=".5"')+
+    path('M-120 -22 Q0 -30 120 -22','#7a7a86','stroke-width="3" fill="none" opacity=".22"'));
+
+  // raw_ceramic — hand-thrown warm clay, throwing rings, glaze pool
+  V.raw_ceramic = () => g(shadow(140,132)+
+    screenEll(0,0,140,66,'cream','creamDot',8,0)+ well(120,54,0.3)+
+    (function(){let s='';for(let i=1;i<=4;i++)s+=`<ellipse cx="0" cy="2" rx="${28*i}" ry="${13*i}" fill="none" stroke="#a89878" stroke-width="1.4" opacity=".28"/>`;return s;})()+
+    scatter(0,0,132,60,54,1.0,'#c8b898',5)+ contact(120,54)+ rimLight(140,66,'#f6ecd6','#6a5c44')+ sheen(140,66));
+
+  // white_porcelain — pristine glossy, double rim, mirror reflection
+  V.white_porcelain = () => g(shadow(140,132)+
+    screenEll(0,0,140,66,'ivory','ivoryDot',9,0)+ well(118,54,0.26)+
+    ell(0,0,116,54,'none','stroke="#d8d2c2" stroke-width="1.8" opacity=".7"')+ contact(116,54)+
+    rimLight(140,66,'#ffffff','#8a8474')+ ell(-34,-16,80,28,'#ffffff','opacity=".2"')+ sheen(140,66));
+
+  // black_glaze — dark reflective glaze, strong specular streak
+  V.black_glaze = () => g(shadow(140,132)+
+    screenEll(0,0,140,66,'ink','inkDot',8,0)+ well(120,56,0.4)+
+    rimLight(140,66,'#6a6a78','#050508')+
+    path('M-78 -24 Q0 -38 84 -20','#a8a8b6','stroke-width="5" fill="none" opacity=".5"')+
+    path('M-54 -14 Q0 -24 60 -12','#c8c8d4','stroke-width="2" fill="none" opacity=".3"')+
+    ell(-28,-12,72,24,'#5a5a68','opacity=".26"'));
+
+  // glass_cloche — clear dome, layered reflections
+  V.glass_cloche = () => g(shadow(120,110)+
+    screenEll(0,10,120,52,'ivory','ivoryDot',8,0)+ contact(110,50)+
+    path('M-92 6 Q-92 -80 0 -82 Q92 -80 92 6 Z','#2a3038','opacity=".16"')+
+    path('M-92 6 Q-92 -80 0 -82 Q92 -80 92 6','#bcc8d0','stroke-width="2.5" fill="none" opacity=".6"')+
+    path('M-60 -30 Q-42 -70 -6 -76','#f2f8fc','stroke-width="5" fill="none" opacity=".5"')+
+    path('M-40 -20 Q-28 -50 -2 -58','#f2f8fc','stroke-width="2.5" fill="none" opacity=".34"')+
+    ell(0,4,80,16,'#000','opacity=".24"')+ circle(0,-86,7,'#d8e0e4','opacity=".8"'));
+
+  // stone_vessel — thick craggy bowl, deep well
+  V.stone_vessel = () => g(shadow(140,120)+
+    screen('M-136 -6 Q-140 -42 -80 -50 Q0 -58 80 -50 Q140 -42 136 -6 Q120 42 0 54 Q-120 42 -136 -6 Z','ink','inkDot',7,0)+
+    scatter(0,-4,128,46,78,1.2,'#3a3630',5)+scatter(0,-2,110,40,30,0.7,'#5a544c',9)+
+    ell(0,0,104,40,'#000','opacity=".42"')+ // deep well
+    path('M-116 -12 Q0 -26 116 -12','#6a645c','stroke-width="3" fill="none" opacity=".36"')+
+    path('M-112 -14 Q0 -28 112 -14','#8a847c','stroke-width="1.4" fill="none" opacity=".3"')+ hi(-32,-24,60,0.22));
+
+  // mirror_tray — polished metal, sharp multi-band reflections
+  V.mirror_tray = () => g(shadow(140,120)+
+    screenEll(0,0,138,62,'ivory','ivoryDot',10,0)+
+    ell(0,0,138,62,'#9aa2aa','opacity=".5"')+ well(120,54,0.18)+
+    path('M-96 -24 Q0 -38 96 -20','#ffffff','stroke-width="7" fill="none" opacity=".6"')+
+    path('M-74 6 Q0 -6 74 10','#ffffff','stroke-width="3.5" fill="none" opacity=".36"')+
+    path('M-42 22 Q0 14 46 26','#ffffff','stroke-width="2" fill="none" opacity=".24"')+
+    rimLight(138,62,'#f2f6fa','#5a626a'));
+
+  // ice_plate — frosted translucent slab, cracks + frozen speckle
+  V.ice_plate = () => g(shadow(140,120)+
+    screenEll(0,0,138,62,'ivory','ivoryDot',9,0)+
+    ell(0,0,138,62,'#cfe0e8','opacity=".36"')+ well(118,52,0.16)+
+    path('M-46 -32 L-12 2 L-34 34 M22 -32 L46 12 M2 -12 L66 -22 M-62 6 L-20 18 M40 20 L58 -6','#ffffff','stroke-width="1.8" fill="none" opacity=".7"')+
+    scatter(0,0,120,50,46,1.4,'#f2f8fc',5)+ rimLight(138,62,'#ffffff','#7a95a2')+ sheen(138,62));
+
+  // wood_board — warm plank, grain + knots + bevel
+  V.wood_board = () => g(shadow(150,70)+
+    screen('M-150 -44 L150 -44 L150 44 L-150 44 Z','amber','amberDot',7,0)+
+    (function(){let s='';for(let i=-3;i<=3;i++)s+=`<path d="M-150 ${i*13} Q0 ${i*13-6} 150 ${i*13}" stroke="#7a4e16" stroke-width="1.6" fill="none" opacity=".48"/>`;return s;})()+
+    circle(-70,10,8,'#6a4212','opacity=".55"')+circle(-70,10,3.4,'#4a2e08','opacity=".65"')+
+    circle(64,-14,5.4,'#6a4212','opacity=".5"')+
+    path('M-150 -44 L150 -44','#e8b878','stroke-width="2.5" opacity=".45"')+
+    path('M-150 44 L150 44','#000','stroke-width="3" opacity=".4"')+ scatter(0,0,140,38,24,0.9,'#a9711f',7));
+
+  // volcanic_rock — porous basalt, dense pores + ember glow
+  V.volcanic_rock = () => g(shadow(144,120)+
+    screen('M-140 -4 Q-144 -40 -70 -48 Q0 -54 70 -48 Q144 -40 140 -4 Q124 44 0 52 Q-124 44 -140 -4 Z','ink','inkDot',6,0)+
+    scatter(0,0,130,46,140,1.9,'#080808',5)+scatter(0,0,120,42,56,0.9,'#4a4a4e',9)+
+    scatter(0,8,86,28,16,1.5,'#9a4418',13)+ scatter(0,10,70,22,7,1.0,'#e06a20',17)+ // embers glow
+    ell(0,2,104,38,'#000','opacity=".34"')+ hi(-32,-18,52,0.16));
+
+  // copper_pot — warm metal, hammered facets, bright rim + reflection
+  V.copper_pot = () => g(shadow(130,120)+
+    screen('M-120 -8 Q-124 26 -60 42 Q0 52 60 42 Q124 26 120 -8 Q118 -32 0 -36 Q-118 -32 -120 -8 Z','amber','amberDot',7,0)+
+    (function(){let s='';for(let r=0;r<5;r++)for(let cc=-4;cc<=4;cc++){const x=cc*24+(r%2?12:0),y=-6+r*11;s+=`<circle cx="${x}" cy="${y}" r="6" fill="none" stroke="#f0c070" stroke-width="1" opacity=".38"/><circle cx="${x-1.5}" cy="${y-1.5}" r="2.2" fill="#ffe6b0" opacity=".4"/>`;}return s;})()+ // hammered dimples
+    ell(0,-8,120,30,'none','stroke="#ffcf7a" stroke-width="4" opacity=".8"')+
+    path('M-84 -4 Q0 -14 84 2','#fff0c8','stroke-width="6" fill="none" opacity=".55"')+
+    ell(0,-6,110,24,'#5a2e0a','opacity=".34"'));
+
+  // seashell — fan shell, radiating ribs + growth lines + pearl sheen
+  V.seashell = () => g(shadow(140,120)+
+    screen('M0 52 Q-140 30 -120 -30 Q-80 -50 0 -52 Q80 -50 120 -30 Q140 30 0 52 Z','cream','creamDot',7,0)+
+    (function(){let s='';for(let i=-7;i<=7;i++){const a=i*11*Math.PI/180;s+=`<path d="M0 48 Q${Math.sin(a)*70} ${-12-Math.abs(i)*3} ${Math.sin(a)*124} -34" stroke="#b8a480" stroke-width="2" fill="none" opacity=".55"/>`;}return s;})()+
+    (function(){let s='';for(let r=1;r<=4;r++)s+=`<path d="M${-34*r} ${22-r*4} Q0 ${46-r*8} ${34*r} ${22-r*4}" stroke="#ece0c4" stroke-width="1.2" fill="none" opacity=".34"/>`;return s;})()+
+    ell(-28,-4,56,22,'#fff','opacity=".18"')+ ell(24,-10,30,12,'#ffd0e0','opacity=".12"')+ hi(-30,0,52,0.4));
+
+  // lacquer_bowl — deep glossy red-black, mirror interior
+  V.lacquer_bowl = () => g(shadow(126,120)+
+    screen('M-120 -6 Q-124 28 -60 44 Q0 54 60 44 Q124 28 120 -6 Q118 -30 0 -34 Q-118 -30 -120 -6 Z','crimson','crimsonDot',7,0)+
+    ell(0,-6,120,28,'none','stroke="#ff7a64" stroke-width="3" opacity=".7"')+
+    ell(0,-4,108,24,'#160606','opacity=".55"')+ // deep dark interior
+    path('M-76 -10 Q0 -20 76 -6','#ffc0a8','stroke-width="5" fill="none" opacity=".5"')+
+    path('M-44 4 Q0 -2 48 6','#ff9a80','stroke-width="2.5" fill="none" opacity=".34"'));
+
+  // clay_pot — rustic terracotta, matte thumb-thrown texture
+  V.clay_pot = () => g(shadow(130,120)+
+    screen('M-124 -6 Q-128 28 -62 44 Q0 54 62 44 Q128 28 124 -6 Q120 -32 0 -36 Q-120 -32 -124 -6 Z','coral','coralDot',7,0)+
+    ell(0,-6,124,30,'none','stroke="#b0604a" stroke-width="3.5" opacity=".6"')+
+    ell(0,-4,108,26,'#341612','opacity=".36"')+
+    scatter(0,6,110,36,46,1.1,'#a24634',5)+
+    (function(){let s='';for(let i=1;i<=4;i++)s+=`<ellipse cx="0" cy="8" rx="${26*i}" ry="${8*i}" fill="none" stroke="#7a3828" stroke-width="1.2" opacity=".24"/>`;return s;})()+ hi(-30,-14,52,0.22));
+
+  // black_stone_slab — long polished obsidian, wet sheen
+  V.black_stone_slab = () => g(shadow(150,54)+
+    screen('M-150 -32 Q-152 -36 -146 -36 L146 -36 Q152 -36 150 -32 L150 32 Q152 36 146 36 L-146 36 Q-152 36 -150 32 Z','ink','inkDot',6,0)+
+    scatter(0,0,140,28,46,0.8,'#2a2a32',5)+
+    path('M-150 -26 L150 -26','#6a6a76','stroke-width="3" fill="none" opacity=".34"')+ // sheen
+    path('M-130 -22 Q0 -28 130 -22','#8a8a96','stroke-width="1.6" fill="none" opacity=".24"')+
+    path('M-146 32 L146 32','#000','stroke-width="3" opacity=".5"'));
+
+  // nest_vessel — woven twigs, dark hollow
+  V.nest_vessel = () => g(shadow(138,120)+
+    screenEll(0,0,136,60,'sear','searDot',5,0)+
+    (function(){let s='';for(let i=0;i<30;i++){const a=i*12*Math.PI/180;const rx=Math.cos(a),ry=Math.sin(a);
+      s+=`<path d="M${rx*34} ${ry*15} Q${rx*88} ${ry*40} ${rx*132} ${ry*56}" stroke="${i%2?'#5a3a1a':'#8a5e30'}" stroke-width="${1.8+i%3*0.7}" fill="none" opacity=".75"/>`;}return s;})()+
+    ell(0,0,84,36,'#100a04','opacity=".58"')+ hi(-30,-8,42,0.24));
+
+  // smoke_box — dark wooden box, grain + lid seam + smoke wisps
+  V.smoke_box = () => g(shadow(130,64)+
+    screen('M-124 -36 L124 -36 L124 36 L-124 36 Z','sear','searDot',6,0)+
+    (function(){let s='';for(let i=-2;i<=2;i++)s+=`<path d="M-124 ${i*13} L124 ${i*13}" stroke="#4a3018" stroke-width="1.3" opacity=".4"/>`;return s;})()+
+    path('M-124 -36 L124 -36','#e0b070','stroke-width="2.5" opacity=".4"')+ // top edge light
+    path('M-124 -30 L124 -30','#2a1808','stroke-width="4" opacity=".6"')+ // lid seam
+    path('M36 -36 Q52 -70 36 -98 Q26 -118 46 -138','#d8dce0','stroke-width="8" fill="none" opacity=".34" stroke-linecap="round"')+
+    path('M58 -36 Q72 -64 60 -90 Q52 -106 66 -122','#d8dce0','stroke-width="4.5" fill="none" opacity=".24" stroke-linecap="round"')+
+    path('M14 -36 Q22 -58 14 -78','#d8dce0','stroke-width="3" fill="none" opacity=".16" stroke-linecap="round"'));
+
+  // paper_edible — translucent curled sheet, fibre texture
+  V.paper_edible = () => g(shadow(140,60)+
+    screen('M-138 30 Q-140 -36 -120 -38 Q0 -32 130 -38 Q142 -32 138 34 Q0 26 -138 30 Z','ivory','ivoryDot',5,0,'opacity=".92"')+
+    path('M-120 -38 Q0 -32 130 -38','#f0eadd','stroke-width="1.8" fill="none" opacity=".55"')+
+    path('M-100 10 Q0 4 110 10','#d8d0bc','stroke-width="1.2" fill="none" opacity=".4"')+
+    (function(){let s='';for(let i=-2;i<=2;i++)s+=`<path d="M${-120} ${i*10} Q0 ${i*10-3} 128 ${i*10}" stroke="#d0c8b2" stroke-width="0.7" fill="none" opacity=".28"/>`;return s;})()+
+    hi(-30,-8,52,0.32));
+
+  root.FDL_VESSEL_ART = V;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* =====================================================================
+   Fine Dining Lab — Flavor-Compound Model (food-pairing hypothesis)
+   ---------------------------------------------------------------------
+   Grounded in the "flavor network" work (Ahn, Ahnert, Bagrow, Barabási,
+   Scientific Reports 2011) and Foodpairing's aroma-molecule approach:
+   ~80% of flavor is volatile aroma; two ingredients tend to pair when they
+   SHARE characteristic aroma-compound families (Western logic), and can also
+   pair by deliberate CONTRAST (East-Asian logic).
+
+   We model each ingredient with a small set of aroma-compound FAMILIES.
+   Affinity(a,b) = weighted overlap of their families -> an explainable,
+   data-driven pairing score over ALL 81 ingredients (not a hand list).
+   Curated, not lab-measured — but every family assignment is defensible
+   from the ingredient's real aroma profile.
+   ===================================================================== */
+(function (root) {
+  'use strict';
+
+  // aroma-compound families: id -> {label, note (what it smells/tastes of)}
+  const FAMILIES = {
+    pyrazine:  {label:'吡嗪·烘烤', note:'烘烤/坚果/焦香 — 美拉德与焙炒产生'},
+    lactone:   {label:'内酯·奶脂', note:'奶油/椰香/桃李 — 乳脂与熟果'},
+    terpene:   {label:'萜烯·柑橘草本', note:'柑橘/松脂/草本清香'},
+    ester:     {label:'酯·果香', note:'水果甜香 — 熟果与发酵'},
+    aldehyde:  {label:'醛·青鲜', note:'青草/黄瓜/脂青 — 清新脂感'},
+    sulfur:    {label:'含硫·葱蒜海洋', note:'葱蒜/海洋/熟蛋 — 硫化物'},
+    phenol:    {label:'酚·烟熏', note:'烟熏/丁香/药香'},
+    furanone:  {label:'呋喃酮·焦糖', note:'焦糖/枫糖/烤麦 — 甜焦'},
+    maritime:  {label:'溴酚·海洋', note:'碘/海藻/贝类的海洋气息'},
+    earthy:    {label:'土壤菌香', note:'土臭素/蘑菇醇 — 菌菇泥土'},
+    floral:    {label:'花香', note:'紫罗兰/玫瑰/橙花的花香萜'},
+    green:     {label:'青叶', note:'割草/叶醛的青绿气'},
+    umami:     {label:'谷氨酸·鲜', note:'谷氨酸/核苷酸鲜味(味觉桥)'},
+    animalic:  {label:'肉脂·血', note:'烤肉脂香/铁质血味'}
+  };
+
+  // ingredient id -> compound families (2-4 each). Curated from real aroma profiles.
+  const ING = {
+    // seafood
+    scallop:['sulfur','lactone','umami','maritime'],
+    langoustine:['maritime','sulfur','umami'],
+    uni:['maritime','umami','lactone'],
+    oyster:['maritime','sulfur','umami'],
+    turbot:['maritime','lactone','umami'],
+    king_crab:['maritime','umami','sulfur'],
+    caviar:['maritime','umami','sulfur'],
+    abalone:['maritime','umami','earthy'],
+    amaebi:['maritime','lactone','umami'],
+    eel_unagi:['furanone','phenol','animalic','umami'],
+    squid:['maritime','umami'],
+    sea_bream:['maritime','aldehyde','umami'],
+    anchovy:['umami','sulfur','maritime'],
+    // meat
+    wagyu:['animalic','lactone','furanone','umami'],
+    squab:['animalic','pyrazine','earthy'],
+    iberico:['animalic','pyrazine','lactone','umami'],
+    lamb:['animalic','terpene','phenol'],
+    foie_gras:['lactone','animalic','furanone'],
+    duck:['animalic','furanone','pyrazine'],
+    veal_sweetbread:['pyrazine','lactone','animalic'],
+    venison:['animalic','earthy','phenol'],
+    beef_tartare:['animalic','umami'],
+    short_rib:['animalic','furanone','pyrazine','umami'],
+    suckling_pig:['pyrazine','furanone','animalic'],
+    quail:['animalic','pyrazine','earthy'],
+    rabbit:['animalic','green','terpene'],
+    bone_marrow:['animalic','lactone','pyrazine'],
+    pork_jowl:['animalic','lactone','umami'],
+    // vegetable
+    white_asparagus:['sulfur','green','earthy'],
+    heirloom_tomato:['umami','green','ester'],
+    beetroot:['earthy','furanone'],
+    green_pea:['green','aldehyde'],
+    celeriac:['earthy','terpene','green'],
+    carrot:['terpene','furanone','earthy'],
+    corn:['furanone','lactone','umami'],
+    potato:['pyrazine','earthy','sulfur'],
+    cauliflower:['sulfur','pyrazine','green'],
+    cabbage:['sulfur','green'],
+    // fungi + truffles (garnish cat but fungal)
+    black_truffle:['earthy','sulfur','animalic'],
+    white_truffle:['sulfur','earthy','animalic'],
+    matsutake:['earthy','terpene','umami'],
+    porcini:['earthy','pyrazine','umami'],
+    morel:['earthy','pyrazine','phenol'],
+    chanterelle:['earthy','ester','terpene'],
+    // acid + fruit
+    yuzu:['terpene','floral','ester'],
+    green_apple:['ester','aldehyde','green'],
+    rhubarb:['green','ester'],
+    sea_buckthorn:['ester','terpene','aldehyde'],
+    lime:['terpene','aldehyde'],
+    passion_fruit:['ester','sulfur','terpene'],
+    strawberry:['ester','furanone','floral'],
+    cherry:['ester','lactone','floral'],
+    fig:['ester','furanone','green'],
+    grape:['ester','terpene','floral'],
+    // dairy
+    parmesan:['umami','lactone','pyrazine'],
+    burrata:['lactone','umami'],
+    egg_yolk:['sulfur','lactone','umami'],
+    goat_cheese:['lactone','green','sulfur'],
+    // grain
+    risotto_rice:['furanone','lactone'],
+    buckwheat:['pyrazine','furanone'],
+    koji_rice:['furanone','umami','ester'],
+    // spice/herb
+    saffron:['terpene','furanone','floral'],
+    vanilla:['lactone','furanone','floral'],
+    dill:['terpene','green'],
+    basil:['terpene','phenol','floral'],
+    // sauce/base
+    kombu_dashi:['umami','maritime'],
+    brown_butter:['furanone','lactone','pyrazine'],
+    beurre_blanc:['lactone','ester'],
+    jus:['animalic','furanone','umami'],
+    salsa_verde:['terpene','green','sulfur'],
+    ponzu:['terpene','umami','maritime'],
+    mole:['pyrazine','phenol','furanone'],
+    tigers_milk:['terpene','sulfur','umami'],
+    // texture / garnish
+    buckwheat_crisp:['pyrazine','furanone'],
+    tuile:['furanone','pyrazine'],
+    edible_flower:['floral','green'],
+    nasturtium:['green','sulfur','terpene'],
+    micro_herb:['green','terpene'],
+    gold_leaf:[],                        // inert — visual only
+    nori_powder:['maritime','umami','sulfur'],
+    charcoal_oil:['phenol','pyrazine']
+  };
+
+  // weight some families higher when shared (they are stronger "bridges")
+  const W = { umami:1.4, maritime:1.3, earthy:1.25, animalic:1.2, pyrazine:1.15, furanone:1.15 };
+  const wOf = f => W[f] || 1;
+
+  function families(id){ return ING[id] || []; }
+
+  // shared-compound affinity 0..1 (weighted Jaccard-ish over families)
+  function affinity(a, b){
+    const A = families(a), B = families(b);
+    if(!A.length || !B.length) return 0;
+    const setB = new Set(B);
+    let shareW = 0, sharedList = [];
+    A.forEach(f=>{ if(setB.has(f)){ shareW += wOf(f); sharedList.push(f); } });
+    const denom = new Set([...A, ...B]).size || 1;
+    const score = shareW / denom;                 // 0..~1.4
+    return { score: Math.min(1, score * 1.15), shared: sharedList };
+  }
+
+  // recommend the top-N ingredients that best bridge with the current set.
+  // Blends: shared-aroma affinity (food-pairing hypothesis) + curated classic
+  // pairings (contrast/acid-balance knowledge) + a cross-category nudge so a
+  // seafood dish isn't only told to add more seafood.
+  // opts: {catOf(id)->cat, classicPairs:Set('a|b'), n}
+  function recommend(currentIds, allIds, opts={}){
+    const n = opts.n || 6;
+    const catOf = opts.catOf || (()=> '');
+    const classic = opts.classicPairs || new Set();
+    const key=(a,b)=>[a,b].sort().join('|');
+    const used = new Set(currentIds);
+    const usedCats = new Set(currentIds.map(catOf));
+    const cand = allIds.filter(id=>!used.has(id) && families(id).length);
+    const scored = cand.map(id=>{
+      let best=0, bestVia=[], sum=0, cnt=0, isClassic=false;
+      currentIds.forEach(cur=>{
+        const {score, shared} = affinity(cur, id);
+        if(score>best){ best=score; bestVia=shared; }
+        sum+=score; cnt++;
+        if(classic.has(key(cur,id))) isClassic=true;
+      });
+      const avg = cnt? sum/cnt : 0;
+      let s = best*0.6 + avg*0.25;
+      let via = bestVia, kind = 'aroma';
+      if(isClassic){ s = Math.max(s, 0.72) + 0.2; kind='classic'; }   // curated classic bridge
+      // cross-category nudge: reward a new category (breadth)
+      if(!usedCats.has(catOf(id))) s += 0.06;
+      return { id, score:s, via, kind };
+    }).filter(x=>x.score>0.1);
+    scored.sort((a,b)=>b.score-a.score);
+    return scored.slice(0,n);
+  }
+
+  root.FDL_FLAVOR = { FAMILIES, families, affinity, recommend };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>window.FDL_DB = {"INGREDIENTS":[{"id":"scallop","name":"带子 Scallop","cat":"seafood","season":"winter","tier":"premium","texture":["柔嫩","丝滑"],"flavor":["清甜","奶香","海洋"],"color":"#e6d3bd","ref":"The French Laundry 生食薄切；日式昆布〆"},{"id":"langoustine","name":"挪威海螯虾 Langoustine","cat":"seafood","season":"all","tier":"premium","texture":["柔嫩","弹"],"flavor":["鲜甜","碘香"],"color":"#e88a7a","ref":"Le Bernardin / Frantzén 生食或极短炙"},{"id":"uni","name":"北海道海胆 Uni","cat":"seafood","season":"autumn","tier":"rare","texture":["绵密","即化"],"flavor":["浓鲜","海洋甜","奶油"],"color":"#e8934a","ref":"Sushi Saito 军舰；Den 冷前菜"},{"id":"oyster","name":"生蚝 Oyster","cat":"seafood","season":"winter","tier":"premium","texture":["滑","juicy"],"flavor":["矿物","海洋","金属清冽"],"color":"#c8d0c0","ref":"EMP 苹果雪葩配蚝；Noma 佐酸模"},{"id":"turbot","name":"多宝鱼 Turbot","cat":"seafood","season":"all","tier":"premium","texture":["紧实","丰腴"],"flavor":["清雅","坚果尾"],"color":"#f0e8dc","ref":"Le Bernardin 招牌黄油慢煎"},{"id":"king_crab","name":"帝王蟹 King Crab","cat":"seafood","season":"winter","tier":"premium","texture":["纤维","弹"],"flavor":["清甜","海洋"],"color":"#f0b8a0","ref":"北欧冬季主角"},{"id":"caviar","name":"鱼子酱 Caviar","cat":"garnish","season":"all","tier":"rare","texture":["爆珠","滑"],"flavor":["咸鲜","坚果","海洋"],"color":"#1a1618","ref":"全球通用点睛；Petrossian 级"},{"id":"abalone","name":"鲍鱼 Abalone","cat":"seafood","season":"all","tier":"rare","texture":["弹韧","丰腴"],"flavor":["浓鲜","海洋"],"color":"#b0a088","ref":"日料/粤菜高端；The Chairman"},{"id":"amaebi","name":"甜虾 Amaebi","cat":"seafood","season":"winter","tier":"premium","texture":["黏糯","滑"],"flavor":["浓甜","海洋"],"color":"#f0a898","ref":"江户前寿司生食"},{"id":"eel_unagi","name":"鳗鱼 Unagi","cat":"seafood","season":"summer","tier":"premium","texture":["肥润","软"],"flavor":["脂甜","焦香"],"color":"#4a2f1a","ref":"日式蒲烧；Den 演绎"},{"id":"squid","name":"墨鱼 Squid","cat":"seafood","season":"all","tier":"common","texture":["脆弹","滑"],"flavor":["清甜","海洋"],"color":"#f2e8e0","ref":"地中海/日式生食切丝"},{"id":"sea_bream","name":"真鲷 Sea Bream","cat":"seafood","season":"spring","tier":"premium","texture":["紧实","清爽"],"flavor":["清雅","淡甜"],"color":"#f0dcd0","ref":"日料春季昆布〆"},{"id":"anchovy","name":"凤尾鱼 Anchovy","cat":"seafood","season":"all","tier":"common","texture":["软","油润"],"flavor":["浓咸鲜","发酵"],"color":"#8a6a4a","ref":"西班牙/意式咸鲜基底"},{"id":"wagyu","name":"A5 和牛 Wagyu","cat":"meat","season":"all","tier":"rare","texture":["即化","油脂丰盈"],"flavor":["浓郁","牛油香","鲜"],"color":"#a94a4a","ref":"日式炭烤；Ultraviolet 分子演绎"},{"id":"squab","name":"乳鸽 Squab","cat":"meat","season":"autumn","tier":"premium","texture":["嫩","略韧"],"flavor":["野味","铁质","浓香"],"color":"#7a3a3a","ref":"Guy Savoy 玫瑰乳鸽"},{"id":"iberico","name":"伊比利亚黑猪 Ibérico","cat":"meat","season":"all","tier":"premium","texture":["油润","丝滑"],"flavor":["坚果","橡果甜","咸鲜"],"color":"#a05848","ref":"A Casa do Porco；西班牙火腿"},{"id":"lamb","name":"羔羊 Lamb","cat":"meat","season":"spring","tier":"premium","texture":["嫩","juicy"],"flavor":["草本","脂香","微膻"],"color":"#9a4a42","ref":"Mirazur 春季；地中海"},{"id":"foie_gras","name":"鹅肝 Foie Gras","cat":"meat","season":"winter","tier":"rare","texture":["绵密","即化"],"flavor":["浓郁","黄油","矿物"],"color":"#d8b878","ref":"法餐殿堂；常配甜酸"},{"id":"duck","name":"鸭 Duck","cat":"meat","season":"autumn","tier":"premium","texture":["嫩","脂厚"],"flavor":["野味","脂香"],"color":"#6a3a2a","ref":"法式熟成鸭胸；北京烤鸭改良"},{"id":"veal_sweetbread","name":"小牛胸腺 Sweetbread","cat":"meat","season":"all","tier":"premium","texture":["外脆内嫩"],"flavor":["奶香","矿物"],"color":"#d8c0a0","ref":"法餐经典煎黄油"},{"id":"venison","name":"鹿肉 Venison","cat":"meat","season":"autumn","tier":"premium","texture":["紧实","嫩"],"flavor":["浓野味","铁质"],"color":"#6a2a2a","ref":"北欧秋冬野味；配浆果"},{"id":"beef_tartare","name":"生牛肉 Beef Tartare","cat":"meat","season":"all","tier":"premium","texture":["软糯","细"],"flavor":["鲜","矿物"],"color":"#b04838","ref":"法式经典；现代餐厅演绎"},{"id":"short_rib","name":"和牛短肋 Short Rib","cat":"meat","season":"winter","tier":"premium","texture":["酥烂","丰腴"],"flavor":["浓郁","焦糖","肉香"],"color":"#7a2e28","ref":"慢煮48h;现代西餐主菜"},{"id":"suckling_pig","name":"脆皮乳猪 Suckling Pig","cat":"meat","season":"all","tier":"premium","texture":["脆皮","嫩肉"],"flavor":["焦香","脂甜"],"color":"#c87a44","ref":"西班牙 Botín;粤式化皮"},{"id":"quail","name":"鹌鹑 Quail","cat":"meat","season":"autumn","tier":"premium","texture":["嫩","紧实"],"flavor":["野味","坚果"],"color":"#8a4a34","ref":"法餐酿鹌鹑;常配葡萄/无花果"},{"id":"rabbit","name":"兔鞍 Rabbit Saddle","cat":"meat","season":"spring","tier":"premium","texture":["紧实","嫩"],"flavor":["清淡野味","草本"],"color":"#c8a888","ref":"法/意乡村精致化;卷酿"},{"id":"bone_marrow","name":"烤骨髓 Bone Marrow","cat":"meat","season":"winter","tier":"premium","texture":["流心","脂滑"],"flavor":["浓脂","坚果","矿物"],"color":"#e0cba0","ref":"St. JOHN 招牌;配吐司欧芹"},{"id":"pork_jowl","name":"猪颊肉 Guanciale/Jowl","cat":"meat","season":"all","tier":"premium","texture":["油润","即化"],"flavor":["脂香","咸鲜","坚果"],"color":"#c86a5a","ref":"意式腌制;慢煮猪颊"},{"id":"white_asparagus","name":"白芦笋 White Asparagus","cat":"vegetable","season":"spring","tier":"premium","texture":["脆嫩","多汁"],"flavor":["清甜","微苦","草本"],"color":"#f0e8d0","ref":"Arpège 蔬食主义；欧洲春季限定"},{"id":"heirloom_tomato","name":"传家宝番茄 Heirloom Tomato","cat":"vegetable","season":"summer","tier":"common","texture":["多汁","果肉"],"flavor":["酸甜","鲜","日晒香"],"color":"#d84838","ref":"Osteria Francescana 夏季"},{"id":"beetroot","name":"甜菜根 Beetroot","cat":"vegetable","season":"autumn","tier":"common","texture":["脆","粉糯"],"flavor":["泥土甜","矿物"],"color":"#8a1a3a","ref":"Alchemist；北欧烤盐焗；EMP 名菜"},{"id":"green_pea","name":"青豌豆 Green Pea","cat":"vegetable","season":"spring","tier":"common","texture":["爆汁","粉"],"flavor":["清甜","草本"],"color":"#6a9a3a","ref":"春季 amuse;泥/慕斯"},{"id":"celeriac","name":"根芹 Celeriac","cat":"vegetable","season":"winter","tier":"common","texture":["脆","粉"],"flavor":["坚果","清香"],"color":"#e0d8c0","ref":"北欧整颗盐焗当主菜"},{"id":"carrot","name":"胡萝卜 Carrot","cat":"vegetable","season":"all","tier":"common","texture":["脆","粉甜"],"flavor":["清甜","泥土"],"color":"#e07a20","ref":"Arpège 焦糖胡萝卜；EMP 鞑靼"},{"id":"corn","name":"玉米 Corn","cat":"vegetable","season":"summer","tier":"common","texture":["爆汁","脆"],"flavor":["清甜","奶香"],"color":"#f0c840","ref":"秘鲁/美式;Central 高原玉米"},{"id":"potato","name":"马铃薯 Potato","cat":"vegetable","season":"all","tier":"common","texture":["粉糯","脆(炸)"],"flavor":["淀粉甜","泥土"],"color":"#e8d8a8","ref":"法式土豆泥;Robuchon 级"},{"id":"cauliflower","name":"花椰菜 Cauliflower","cat":"vegetable","season":"winter","tier":"common","texture":["脆","软(烤)"],"flavor":["坚果","清香"],"color":"#f0ece0","ref":"现代整颗炭烤当主角"},{"id":"cabbage","name":"卷心菜 Cabbage","cat":"vegetable","season":"winter","tier":"common","texture":["脆","软糯"],"flavor":["清甜","焦香"],"color":"#b8c89a","ref":"北欧炭烤焦叶;Frantzén"},{"id":"black_truffle","name":"黑松露 Black Truffle","cat":"garnish","season":"winter","tier":"rare","texture":["脆","颗粒"],"flavor":["浓菌香","泥土","麝香"],"color":"#2a1a12","ref":"冬季白盘点睛;意/法通用"},{"id":"white_truffle","name":"白松露 White Truffle","cat":"garnish","season":"autumn","tier":"rare","texture":["薄脆"],"flavor":["浓烈蒜香","菌","气体感"],"color":"#d8c8a0","ref":"阿尔巴白松露;意餐刨片"},{"id":"matsutake","name":"松茸 Matsutake","cat":"fungi","season":"autumn","tier":"rare","texture":["脆","纤维"],"flavor":["松木香","泥土","鲜"],"color":"#c8a878","ref":"RyuGin 土瓶蒸;怀石秋主角"},{"id":"porcini","name":"牛肝菌 Porcini","cat":"fungi","season":"autumn","tier":"premium","texture":["肥厚","滑"],"flavor":["坚果","浓菌","泥土"],"color":"#8a6038","ref":"意/法秋季;煎或生刨"},{"id":"morel","name":"羊肚菌 Morel","cat":"fungi","season":"spring","tier":"premium","texture":["海绵","弹"],"flavor":["浓菌","烟熏感"],"color":"#6a4a2a","ref":"法餐春季;常填酿"},{"id":"chanterelle","name":"鸡油菌 Chanterelle","cat":"fungi","season":"autumn","tier":"premium","texture":["脆","滑"],"flavor":["杏香","胡椒","菌"],"color":"#e0a030","ref":"北欧/法秋季森林"},{"id":"yuzu","name":"柚子 Yuzu","cat":"acid","season":"winter","tier":"premium","texture":["汁"],"flavor":["清冽酸","花香","柑橘"],"color":"#e8d84a","ref":"日料点睛;现代西餐酸源新宠"},{"id":"green_apple","name":"青苹果 Green Apple","cat":"acid","season":"autumn","tier":"common","texture":["脆","汁"],"flavor":["清爽酸","果香"],"color":"#a8d84a","ref":"EMP 生蚝配苹果雪葩"},{"id":"rhubarb","name":"大黄 Rhubarb","cat":"acid","season":"spring","tier":"common","texture":["纤维","汁"],"flavor":["尖锐酸","青草"],"color":"#d84868","ref":"北欧春季;发酵/腌渍"},{"id":"sea_buckthorn","name":"沙棘 Sea Buckthorn","cat":"acid","season":"autumn","tier":"premium","texture":["泥","汁"],"flavor":["强酸","热带果","涩"],"color":"#f0a020","ref":"Noma 标志北欧酸源"},{"id":"lime","name":"青柠 Lime","cat":"acid","season":"all","tier":"common","texture":["汁"],"flavor":["尖酸","柑橘"],"color":"#a8d020","ref":"秘鲁 ceviche;Maido 酸橘汁"},{"id":"passion_fruit","name":"百香果 Passion Fruit","cat":"fruit","season":"summer","tier":"premium","texture":["爆浆","籽脆"],"flavor":["强酸","热带香"],"color":"#e0a828","ref":"南美/热带;Central"},{"id":"strawberry","name":"草莓 Strawberry","cat":"fruit","season":"spring","tier":"common","texture":["多汁","软"],"flavor":["酸甜","果香"],"color":"#d83048","ref":"Osteria 'Oops' 甜点解构"},{"id":"cherry","name":"樱桃 Cherry","cat":"fruit","season":"summer","tier":"premium","texture":["多汁","脆"],"flavor":["酸甜","浓果"],"color":"#8a1a2a","ref":"配野味/鸭;北欧樱桃"},{"id":"fig","name":"无花果 Fig","cat":"fruit","season":"autumn","tier":"premium","texture":["软糯","籽脆"],"flavor":["蜜甜","果香"],"color":"#7a3a5a","ref":"地中海;配火腿/鹅肝"},{"id":"grape","name":"葡萄 Grape","cat":"fruit","season":"autumn","tier":"common","texture":["爆汁","脆"],"flavor":["清甜","微酸"],"color":"#5a7a3a","ref":"西班牙 gazpacho;El Celler"},{"id":"parmesan","name":"帕玛森 Parmigiano","cat":"dairy","season":"all","tier":"premium","texture":["脆","颗粒"],"flavor":["浓鲜","坚果","咸"],"color":"#e8d8a0","ref":"Osteria '五种熟成帕玛森'"},{"id":"burrata","name":"布拉塔 Burrata","cat":"dairy","season":"summer","tier":"premium","texture":["流心","奶滑"],"flavor":["奶香","清甜"],"color":"#f4efe0","ref":"意式;配番茄/桃"},{"id":"egg_yolk","name":"蛋黄 Egg Yolk","cat":"dairy","season":"all","tier":"common","texture":["流心","绵"],"flavor":["浓郁","奶脂"],"color":"#e8a020","ref":"63°C 温泉蛋;分子低温"},{"id":"goat_cheese","name":"山羊奶酪 Goat Cheese","cat":"dairy","season":"all","tier":"common","texture":["绵","碎"],"flavor":["酸鲜","草本"],"color":"#f0ece2","ref":"法式;配甜菜"},{"id":"risotto_rice","name":"意大利米 Risotto Rice","cat":"grain","season":"all","tier":"common","texture":["弹糯","浓稠"],"flavor":["淀粉甜","奶香"],"color":"#f0ead8","ref":"Le Calandre 藏红花米;Osteria"},{"id":"buckwheat","name":"荞麦 Buckwheat","cat":"grain","season":"all","tier":"common","texture":["脆","颗粒"],"flavor":["坚果","焙香"],"color":"#8a6a3a","ref":"北欧脆度层/粥"},{"id":"koji_rice","name":"米曲 Koji","cat":"grain","season":"all","tier":"premium","texture":["软","糊"],"flavor":["甜鲜","发酵"],"color":"#e8dcc0","ref":"日式发酵;Noma 发酵实验室"},{"id":"saffron","name":"藏红花 Saffron","cat":"spice","season":"all","tier":"rare","texture":["丝"],"flavor":["蜜香","泥土","苦韵"],"color":"#e07018","ref":"西班牙/意式;米饭点睛"},{"id":"vanilla","name":"香草 Vanilla","cat":"spice","season":"all","tier":"premium","texture":["籽"],"flavor":["甜香","奶油"],"color":"#3a2a1a","ref":"甜品/白酱;也入咸鲜创新"},{"id":"dill","name":"莳萝 Dill","cat":"garnish","season":"spring","tier":"common","texture":["羽叶"],"flavor":["清香","茴香"],"color":"#5a8a3a","ref":"北欧腌鱼标配"},{"id":"basil","name":"罗勒 Basil","cat":"garnish","season":"summer","tier":"common","texture":["柔叶"],"flavor":["清香","茴香甜"],"color":"#3a7a2a","ref":"意式;配番茄/burrata"},{"id":"kombu_dashi","name":"昆布高汤 Kombu Dashi","cat":"sauce","season":"all","tier":"common","texture":["清澈液"],"flavor":["鲜(umami)","海洋","干净"],"color":"#8a8a5a","ref":"日料鲜味基底;现代西餐借用"},{"id":"brown_butter","name":"焦化黄油 Brown Butter","cat":"sauce","season":"all","tier":"common","texture":["油润"],"flavor":["坚果","焦香","奶香"],"color":"#c89858","ref":"法餐万能基底"},{"id":"beurre_blanc","name":"白黄油酱 Beurre Blanc","cat":"sauce","season":"all","tier":"common","texture":["乳化丝滑"],"flavor":["奶香","酸","丰腴"],"color":"#f0e8d8","ref":"法餐经典配鱼"},{"id":"jus","name":"浓缩肉汁 Jus","cat":"sauce","season":"all","tier":"premium","texture":["浓稠亮"],"flavor":["浓肉鲜","焦糖"],"color":"#3a2012","ref":"法餐红肉收尾"},{"id":"salsa_verde","name":"青酱 Salsa Verde","cat":"sauce","season":"summer","tier":"common","texture":["粗粒"],"flavor":["香草","酸","清爽"],"color":"#4a7a2a","ref":"意/南美;配烤肉海鲜"},{"id":"ponzu","name":"橙醋 Ponzu","cat":"sauce","season":"all","tier":"common","texture":["清液"],"flavor":["酸鲜","柑橘"],"color":"#6a4a1a","ref":"日式;生食蘸汁"},{"id":"mole","name":"墨西哥 Mole","cat":"sauce","season":"all","tier":"premium","texture":["浓稠"],"flavor":["巧克力","辣","复杂香料"],"color":"#3a1a10","ref":"墨西哥;Pujol 千日 mole"},{"id":"tigers_milk","name":"虎奶 Leche de Tigre","cat":"sauce","season":"summer","tier":"premium","texture":["清液"],"flavor":["强酸","辣","海鲜鲜"],"color":"#f0ead0","ref":"秘鲁 ceviche 灵魂;Central/Maido"},{"id":"buckwheat_crisp","name":"荞麦脆片 Buckwheat Crisp","cat":"texture","season":"all","tier":"common","texture":["脆","碎"],"flavor":["坚果","焙香"],"color":"#7c5320","ref":"北欧脆度层"},{"id":"tuile","name":"薄脆瓦片 Tuile","cat":"texture","season":"all","tier":"common","texture":["极脆","薄"],"flavor":["焙香","微甜"],"color":"#d8a860","ref":"法式装饰脆片"},{"id":"edible_flower","name":"可食用花 Edible Flowers","cat":"garnish","season":"spring","tier":"premium","texture":["轻脆","柔"],"flavor":["清香","微苦","花蜜"],"color":"#d85a92","ref":"Mirazur/Noma 摆盘点睛"},{"id":"nasturtium","name":"旱金莲叶 Nasturtium","cat":"garnish","season":"summer","tier":"premium","texture":["柔","脆"],"flavor":["辛辣","胡椒","青草"],"color":"#3a7a2a","ref":"现代香辛叶片"},{"id":"micro_herb","name":"微型香草 Micro Herbs","cat":"garnish","season":"all","tier":"common","texture":["嫩芽"],"flavor":["浓缩清香"],"color":"#4a8a3a","ref":"现代摆盘通用"},{"id":"gold_leaf","name":"金箔 Gold Leaf","cat":"garnish","season":"all","tier":"rare","texture":["极薄"],"flavor":["无味(视觉)"],"color":"#f0c840","ref":"奢华点睛;和牛/甜品"},{"id":"nori_powder","name":"海苔粉 Nori Powder","cat":"texture","season":"all","tier":"common","texture":["粉","脆"],"flavor":["海洋鲜","矿物"],"color":"#1a2a1a","ref":"日式增鲜撒粉"},{"id":"charcoal_oil","name":"炭烧油 Charcoal Oil","cat":"garnish","season":"all","tier":"premium","texture":["油滴"],"flavor":["烟熏","焦香"],"color":"#1a1a1a","ref":"现代烟熏点缀"}],"TECHNIQUES":[{"id":"sous_vide","name":"低温慢煮 Sous-vide","intensity":"gentle","effect":"极致嫩度、精准熟度","good_for":["meat","seafood","vegetable"],"ref":"现代西厨标配"},{"id":"smoke","name":"冷/热烟熏 Smoking","intensity":"aromatic","effect":"木质烟香、复杂层次","good_for":["meat","seafood","vegetable"],"ref":"北欧/美式现代"},{"id":"ferment","name":"发酵 Fermentation","intensity":"transform","effect":"增鲜、酸度、深度","good_for":["vegetable","acid","grain","sauce"],"ref":"Noma 发酵实验室核心"},{"id":"cure","name":"腌渍/盐渍 Curing","intensity":"gentle","effect":"紧实质地、浓缩风味","good_for":["seafood","meat"],"ref":"北欧/日式〆"},{"id":"spherify","name":"球化 Spherification","intensity":"molecular","effect":"爆珠、液体封装","good_for":["acid","sauce","fruit","garnish"],"ref":"elBulli 发明遗产"},{"id":"foam","name":"泡沫/慕斯 Espuma","intensity":"molecular","effect":"轻盈空气感风味","good_for":["sauce","vegetable","dairy","fruit"],"ref":"elBulli;现代通用"},{"id":"clarify","name":"澄清 Clarification","intensity":"molecular","effect":"清澈却浓郁的液体","good_for":["sauce"],"ref":"现代高汤/鸡尾酒"},{"id":"torch","name":"喷枪炙烤 Torch/Aburi","intensity":"aromatic","effect":"表面焦香、内部生嫩","good_for":["seafood","meat"],"ref":"日式炙寿司"},{"id":"char","name":"炭火直烤 Charcoal Grill","intensity":"intense","effect":"烟火气、美拉德焦香","good_for":["meat","seafood","vegetable","fungi"],"ref":"Etxebarri/日式炭烤"},{"id":"dehydrate","name":"脱水制脆 Dehydration","intensity":"transform","effect":"浓缩风味、脆质地","good_for":["vegetable","fruit","texture","garnish"],"ref":"现代脆片/粉末"},{"id":"confit","name":"油封 Confit","intensity":"gentle","effect":"柔嫩浸润、浓香","good_for":["meat","vegetable"],"ref":"法餐鸭腿油封经典"},{"id":"pickle","name":"快速腌渍 Pickling","intensity":"gentle","effect":"酸爽脆、平衡油腻","good_for":["vegetable","fruit"],"ref":"北欧/现代解腻"},{"id":"caramelize","name":"焦糖化 Caramelize","intensity":"aromatic","effect":"甜焦香、深色泽","good_for":["vegetable","fruit","dairy"],"ref":"Arpège 焦糖胡萝卜"},{"id":"emulsify","name":"乳化 Emulsion","intensity":"gentle","effect":"顺滑酱体、油水交融","good_for":["sauce","dairy"],"ref":"法餐酱汁基础"},{"id":"freeze_dry","name":"冷冻干燥 Freeze-dry","intensity":"molecular","effect":"保色保形的酥脆粉末","good_for":["fruit","vegetable","garnish"],"ref":"现代/分子"},{"id":"nitro","name":"液氮急冻 Liquid Nitrogen","intensity":"molecular","effect":"瞬间冷冻、烟雾戏剧","good_for":["dairy","fruit","sauce"],"ref":"elBulli/Ultraviolet 表演"},{"id":"ash","name":"灰烬/炭化 Ashing","intensity":"intense","effect":"焦黑外壳、烟苦香","good_for":["vegetable"],"ref":"Alchemist/北欧韭葱灰"},{"id":"cure_gravlax","name":"渍腌三文鱼式 Gravlax","intensity":"gentle","effect":"盐糖香草渍,半生质地","good_for":["seafood"],"ref":"北欧经典腌鱼"},{"id":"tempura","name":"天妇罗 Tempura","intensity":"aromatic","effect":"极薄脆壳、锁鲜","good_for":["seafood","vegetable"],"ref":"日式;现代西餐借用"},{"id":"glaze","name":"上釉/淋汁 Glazing","intensity":"gentle","effect":"光亮外层、浓味附着","good_for":["meat","vegetable"],"ref":"法餐淋 jus/焦糖"}],"VESSELS":[{"id":"slate","name":"黑石板 Slate","material":"石","mood":"极简暗调","ref":"北欧/现代暗色衬底","plate3d":{"shape":"flat","color":"#1a1a1e","rough":0.9}},{"id":"raw_ceramic","name":"手作粗陶 Raw Ceramic","material":"陶","mood":"自然质朴","ref":"Noma/Frantzén 匠人器皿","plate3d":{"shape":"bowl","color":"#2a2622","rough":0.7}},{"id":"white_porcelain","name":"极简白瓷 White Porcelain","material":"瓷","mood":"纯净留白","ref":"法餐经典留白","plate3d":{"shape":"flat","color":"#e8e4dc","rough":0.3}},{"id":"black_glaze","name":"黑釉深盘 Black Glaze","material":"瓷","mood":"戏剧暗黑","ref":"现代暗调摆盘","plate3d":{"shape":"deep","color":"#0e0d10","rough":0.25}},{"id":"glass_cloche","name":"玻璃烟熏罩 Glass Cloche","material":"玻璃","mood":"戏剧揭盖","ref":"烟熏上桌仪式","plate3d":{"shape":"dome","color":"#cfe0e8","rough":0.05}},{"id":"stone_vessel","name":"天然石凹器 Stone Vessel","material":"石","mood":"原始有机","ref":"Central 高山主题","plate3d":{"shape":"organic","color":"#5a564e","rough":0.95}},{"id":"mirror_tray","name":"镜面托盘 Mirror Tray","material":"金属","mood":"倒影华丽","ref":"分子料理展示","plate3d":{"shape":"flat","color":"#c8ccce","rough":0.02,"metal":1}},{"id":"ice_plate","name":"冰盘 Ice Plate","material":"冰","mood":"冷冽通透","ref":"生食海鲜冷盘","plate3d":{"shape":"flat","color":"#dceef4","rough":0.1}},{"id":"wood_board","name":"原木板 Wood Board","material":"木","mood":"温润乡野","ref":"火腿/面包/野味","plate3d":{"shape":"flat","color":"#6a4a2a","rough":0.8}},{"id":"volcanic_rock","name":"火山岩 Volcanic Rock","material":"石","mood":"粗犷炽热","ref":"炭烤上桌;Central 安第斯","plate3d":{"shape":"organic","color":"#2a2626","rough":1}},{"id":"copper_pot","name":"迷你铜锅 Copper Pot","material":"金属","mood":"复古暖光","ref":"法式小份炖物","plate3d":{"shape":"bowl","color":"#b87333","rough":0.3,"metal":1}},{"id":"seashell","name":"贝壳器 Seashell","material":"自然","mood":"海洋叙事","ref":"生蚝/海胆盛器","plate3d":{"shape":"organic","color":"#e8dcc8","rough":0.4}},{"id":"lacquer_bowl","name":"漆器碗 Lacquer Bowl","material":"漆","mood":"东方沉静","ref":"怀石汤物;RyuGin","plate3d":{"shape":"bowl","color":"#3a0a0a","rough":0.1}},{"id":"clay_pot","name":"陶土瓶 Clay Pot","material":"陶","mood":"质朴土瓶","ref":"松茸土瓶蒸","plate3d":{"shape":"deep","color":"#7a5a3a","rough":0.85}},{"id":"black_stone_slab","name":"黑曜石板 Obsidian Slab","material":"石","mood":"深邃奢华","ref":"和牛/生食呈现","plate3d":{"shape":"flat","color":"#0a0a0c","rough":0.15}},{"id":"nest_vessel","name":"鸟巢器 Nest","material":"自然","mood":"森林叙事","ref":"北欧森林主题;Noma","plate3d":{"shape":"organic","color":"#5a4a2a","rough":0.9}},{"id":"smoke_box","name":"烟熏木盒 Smoke Box","material":"木","mood":"揭盖烟雾","ref":"烟熏戏剧上桌","plate3d":{"shape":"box","color":"#4a3a2a","rough":0.75}},{"id":"paper_edible","name":"可食纸托 Edible Paper","material":"可食","mood":"极简先锋","ref":"Mugaritz 可食器皿","plate3d":{"shape":"flat","color":"#e0d8c4","rough":0.6}}],"PAIRINGS":[["scallop","yuzu","带子清甜×柚子清酸,日料/现代西餐经典提亮"],["oyster","green_apple","EMP 名菜:生蚝矿物味配青苹果雪葩解腻"],["langoustine","brown_butter","海螯虾鲜甜×焦化黄油坚果香,法餐经典"],["wagyu","black_truffle","和牛油脂×黑松露菌香,奢华叠加公认经典"],["foie_gras","rhubarb","鹅肝浓腻×大黄尖酸,甜酸解腻法餐逻辑"],["turbot","beurre_blanc","多宝鱼丰腴×白黄油乳化,Le Bernardin 式"],["scallop","caviar","带子×鱼子酱,双重海洋鲜高级叠加"],["uni","kombu_dashi","海胆浓鲜×昆布高汤,日式 umami 协同"],["heirloom_tomato","burrata","番茄×布拉塔,意式夏日黄金组合"],["heirloom_tomato","basil","番茄×罗勒,地中海经典三位一体"],["beetroot","goat_cheese","甜菜土壤甜×山羊奶酪酸鲜,法式经典"],["beetroot","black_truffle","甜菜土壤甜×松露泥土香,同调呼应"],["matsutake","kombu_dashi","松茸松木香×昆布高汤,土瓶蒸经典"],["lamb","edible_flower","春羔羊草本×春花,Mirazur 季节呼应"],["squab","cherry","乳鸽野味×樱桃酸甜,法餐野味配核果"],["king_crab","yuzu","帝王蟹清甜×柚子酸,冬季海鲜提亮"],["iberico","fig","伊比利亚脂香×无花果蜜甜,西班牙经典"],["uni","caviar","海胆×鱼子酱,海洋鲜极致叠加"],["white_asparagus","brown_butter","白芦笋×焦化黄油,欧洲春季黄金"],["green_pea","micro_herb","青豌豆清甜×微香草,春季 amuse"],["duck","fig","鸭脂香×无花果蜜甜,法式秋季"],["duck","cherry","鸭×樱桃,野味配酸甜核果经典"],["risotto_rice","saffron","米×藏红花,米兰烩饭;Le Calandre"],["risotto_rice","parmesan","烩饭×帕玛森,意式浓鲜奶香"],["sea_bream","yuzu","真鲷清雅×柚子,日式春季昆布〆"],["amaebi","caviar","甜虾浓甜×鱼子酱,寿司高级叠加"],["squid","salsa_verde","墨鱼清甜×青酱,地中海清爽"],["corn","tigers_milk","玉米清甜×虎奶酸辣,秘鲁风"],["potato","caviar","土豆泥×鱼子酱,朴素×奢华经典对比"],["cauliflower","brown_butter","花椰菜坚果味×焦化黄油,同调加深"],["scallop","charcoal_oil","带子×炭烧油,烟熏点缀提升复杂度"],["venison","cherry","鹿肉浓野味×樱桃,北欧秋冬配浆果"],["egg_yolk","black_truffle","溏心蛋黄×黑松露,浓郁奢华早午餐式"],["foie_gras","fig","鹅肝×无花果,浓脂配蜜甜经典"],["oyster","kombu_dashi","生蚝×昆布高汤,海洋鲜叠加干净收尾"],["morel","brown_butter","羊肚菌×焦化黄油,法餐春季经典"],["porcini","parmesan","牛肝菌浓菌×帕玛森,意式秋季"],["strawberry","basil","草莓×罗勒,甜品解构的清香反差"],["abalone","kombu_dashi","鲍鱼浓鲜×昆布高汤,东方 umami"],["beef_tartare","egg_yolk","生牛肉×蛋黄,法式鞑靼经典"],["lamb","salsa_verde","羔羊×青酱,地中海去膻提鲜"],["passion_fruit","chanterelle","百香果酸×鸡油菌杏香,南美创新"]],"TABOOS":[{"pair":["oyster","brown_butter"],"level":"warn","why":"生蚝清冽矿物味被焦化黄油厚重坚果味压盖,浪费蚝的细腻"},{"pair":["caviar","sea_buckthorn"],"level":"warn","why":"鱼子酱娇贵咸鲜×沙棘强酸涩,酸度会毁掉鱼子酱层次"},{"pair":["black_truffle","yuzu"],"level":"warn","why":"黑松露幽微菌香极易被柚子高亢花酸盖掉,松露白搭"},{"pair":["wagyu","sea_buckthorn"],"level":"warn","why":"和牛细腻油脂遇沙棘尖锐强酸,风味打架而非平衡"},{"pair":["foie_gras","kombu_dashi"],"level":"warn","why":"鹅肝西式浓脂与昆布日式清鲜体系冲突,缺桥接显突兀"},{"pair":["uni","brown_butter"],"level":"avoid","why":"海胆入口即化的绵密海洋甜被焦化黄油完全掩盖,浪费顶级食材"},{"pair":["matsutake","caviar"],"level":"warn","why":"松茸幽香与鱼子酱咸鲜互不相衬,两种主角互相干扰"},{"pair":["vanilla","anchovy"],"level":"avoid","why":"香草甜香×凤尾鱼浓咸鲜,甜咸体系剧烈冲突"},{"pair":["white_truffle","charcoal_oil"],"level":"avoid","why":"白松露挥发性蒜香会被炭烧烟味彻底吞没"},{"pair":["burrata","jus"],"level":"warn","why":"清新奶香布拉塔配浓重红肉汁,清浊失衡"},{"pair":["mole","caviar"],"level":"warn","why":"复杂厚重 mole 会淹没鱼子酱的精细,主次错乱"},{"pair":["ice_vessel_note","hot_note"],"level":"warn","why":"冰盘上放热菜会迅速化水毁摆盘——冷器配冷食"},{"pair":["saffron","black_truffle"],"level":"warn","why":"藏红花蜜香与松露麝香两种昂贵主香互抢,难调和"},{"pair":["strawberry","anchovy"],"level":"avoid","why":"草莓果甜×凤尾鱼咸腥,无桥接的生硬冲突"},{"pair":["passion_fruit","wagyu"],"level":"warn","why":"百香果强酸热带香会切碎和牛细腻脂香"},{"pair":["vanilla","black_truffle"],"level":"warn","why":"香草与松露两种浓郁香气叠加过载,彼此模糊"},{"pair":["__rule_delicate_seafood","__rule_heavy_smoke"],"level":"warn","why":"娇嫩生食海鲜(海胆/带子/生蚝/甜虾)遇重烟熏,烟味盖过海洋细腻"}],"SIGNATURE_DISHES":[{"id":"noma_ants","name":"活蚂蚁与牛肉鞑靼","restaurant":"Noma","chef":"René Redzepi","city":"哥本哈根","cuisine":"北欧新派","key_ingredients":["beef_tartare","micro_herb"],"techniques":["cure"],"vessel":"slate","story":"Redzepi 用当地采集的活蚂蚁点缀生牛肉,蚂蚁体内的蚁酸提供天然柠檬般的酸香——'风土'哲学的极致:不用进口柑橘,用森林本身的味道。","image_hint":"暗石板上生牛肉,活蚂蚁与嫩芽"},{"id":"noma_veg_flower","name":"植物王国·可食之花","restaurant":"Noma","chef":"René Redzepi","city":"哥本哈根","cuisine":"北欧新派","key_ingredients":["edible_flower","micro_herb","koji_rice"],"techniques":["ferment"],"vessel":"raw_ceramic","story":"Noma 蔬食季的招牌:蜂花粉做金色触角,各色花瓣作翅,发酵浆果醋膏黏合——把一朵'花'做成可食艺术品,颠覆'蔬食朴素'的成见。","image_hint":"粗陶上花瓣拼成的蝴蝶/花"},{"id":"emp_beet","name":"甜菜根鞑靼(变装)","restaurant":"Eleven Madison Park","chef":"Daniel Humm","city":"纽约","cuisine":"美式现代","key_ingredients":["beetroot","goat_cheese"],"techniques":["cure","dehydrate"],"vessel":"white_porcelain","story":"EMP 名菜:整颗甜菜在盐壳与老式绞肉机前桌处理,呈现得像一份生牛肉鞑靼,却全素——一场关于'期待与真实'的餐桌魔术。","image_hint":"白瓷上鲜红甜菜碎似鞑靼"},{"id":"emp_oyster_apple","name":"生蚝与青苹果","restaurant":"Eleven Madison Park","chef":"Daniel Humm","city":"纽约","cuisine":"美式现代","key_ingredients":["oyster","green_apple"],"techniques":["spherify"],"vessel":"ice_plate","story":"生蚝的矿物海洋味遇上青苹果雪葩的清冽酸甜,冰盘冷冽收束——极简三元素,却是解腻与提鲜的教科书。","image_hint":"冰盘上生蚝配绿色苹果雪葩"},{"id":"celler_bombon","name":"焦糖橄榄糖球","restaurant":"El Celler de Can Roca","chef":"Joan Roca","city":"赫罗纳","cuisine":"西班牙前卫","key_ingredients":["edible_flower"],"techniques":["spherify"],"vessel":"mirror_tray","story":"Roca 兄弟把整颗橄榄的味道封进液态球化的糖球,悬于小盆景枝头——一口咬破,童年橄榄的记忆瞬间迸发,elBulli 球化技法的诗意延续。","image_hint":"镜面/枝头悬挂的橄榄液态糖球"},{"id":"disfrutar_macaroni","name":"帕玛森通心粉(空心球化)","restaurant":"Disfrutar","chef":"Oriol Castro 等","city":"巴塞罗那","cuisine":"西班牙前卫","key_ingredients":["parmesan"],"techniques":["spherify","foam"],"vessel":"black_glaze","story":"世界第一的 Disfrutar 招牌:用球化技法做出'空心通心粉',内里是纯帕玛森奶油——形似 pasta,却全无面粉,是 elBulli 血脉的技术炫技。","image_hint":"黑盘上透明空心通心粉状球体"},{"id":"arpege_carrot","name":"焦糖胡萝卜","restaurant":"Arpège","chef":"Alain Passard","city":"巴黎","cuisine":"法餐现代","key_ingredients":["carrot"],"techniques":["caramelize","glaze"],"vessel":"copper_pot","story":"Passard 在三星餐厅把蔬菜捧上主角:一根来自自家菜园的胡萝卜,慢火焦糖化到极致,证明最朴素的根菜也能有'肉'的深度。","image_hint":"铜锅中油亮焦糖胡萝卜"},{"id":"lebernardin_turbot","name":"多宝鱼配白黄油","restaurant":"Le Bernardin","chef":"Éric Ripert","city":"纽约","cuisine":"法餐现代","key_ingredients":["turbot","beurre_blanc"],"techniques":["sous_vide"],"vessel":"white_porcelain","story":"Ripert 的海鲜殿堂信条:'鱼是主角'。多宝鱼精准低温煎至丰腴,白黄油酱以酸提亮,极简却是对食材本味的至高敬意。","image_hint":"白瓷上丰腴白鱼淋亮酱"},{"id":"ryugin_matsutake","name":"松茸土瓶蒸","restaurant":"RyuGin","chef":"Seiji Yamamoto","city":"东京","cuisine":"日本料理","key_ingredients":["matsutake","kombu_dashi"],"techniques":["clarify","char"],"vessel":"clay_pot","story":"山本征治以科学精度重构怀石:炭火轻炙松茸逼出松木香,澄清昆布高汤托底 umami,揭开土瓶盖那一刻,整个秋天的森林扑面而来。","image_hint":"陶土瓶中松茸清汤,揭盖蒸汽"},{"id":"saito_uni","name":"海胆军舰","restaurant":"Sushi Saito","chef":"Takashi Saito","city":"东京","cuisine":"江户前寿司","key_ingredients":["uni","caviar"],"techniques":["cure"],"vessel":"lacquer_bowl","story":"三星寿司之神斋藤孝司:北海道海胆的绵密海洋甜,叠上一点鱼子酱,醋饭温度与握力毫厘不差——极简里的极致,一贯定生死。","image_hint":"漆器上海胆军舰配鱼子酱"},{"id":"den_salad","name":"Dentucky 炸鸡与花园沙拉","restaurant":"Den","chef":"Zaiyu Hasegawa","city":"东京","cuisine":"日本创意","key_ingredients":["micro_herb","edible_flower","carrot"],"techniques":["tempura"],"vessel":"wood_board","story":"长谷川在里以幽默解构高级料理:20+ 种时蔬做成一座'可食花园',配一只戏仿快餐盒的招牌炸鸡——顶级料理也可以让人会心一笑。","image_hint":"木板上繁盛的迷你花园沙拉"},{"id":"central_altitude","name":"海拔之食(安第斯高原)","restaurant":"Central","chef":"Virgilio Martínez","city":"利马","cuisine":"秘鲁现代","key_ingredients":["corn","potato","tigers_milk"],"techniques":["ferment","dehydrate"],"vessel":"stone_vessel","story":"Martínez 按'海拔'编排菜单:一道菜只用某一高度带的原生食材(高原玉米、上百种土豆),把秘鲁的垂直生态搬上石器餐盘——吃的是一片土地的经纬。","image_hint":"天然石凹器上高原玉米土豆"},{"id":"maido_ceviche","name":"日秘 Nikkei 酸橘汁腌鱼","restaurant":"Maido","chef":"Mitsuharu Tsumura","city":"利马","cuisine":"日秘融合","key_ingredients":["sea_bream","tigers_milk","lime"],"techniques":["cure_gravlax"],"vessel":"seashell","story":"Tsumura 融合日本刀工与秘鲁 ceviche:鲜鱼以虎奶(青柠辣椒海鲜汁)瞬渍,盛于贝壳——两种海洋文明在一勺酸辣里相遇。","image_hint":"贝壳器中生鱼片浸乳白虎奶"},{"id":"osteria_parmesan","name":"帕玛森的五种熟成五种质地","restaurant":"Osteria Francescana","chef":"Massimo Bottura","city":"摩德纳","cuisine":"意餐现代","key_ingredients":["parmesan"],"techniques":["foam","dehydrate"],"vessel":"white_porcelain","story":"Bottura 用一种奶酪讲一个时间的故事:同款帕玛森的 24/30/36/40/50 月熟成,分别做成泡沫、脆片、空气、酱、雪——一口尝尽岁月。","image_hint":"白瓷上五种形态的帕玛森"},{"id":"osteria_oops","name":"'哎呀我打翻了柠檬挞'","restaurant":"Osteria Francescana","chef":"Massimo Bottura","city":"摩德纳","cuisine":"意餐现代","key_ingredients":["strawberry","vanilla"],"techniques":["freeze_dry"],"vessel":"black_glaze","story":"源于副厨真的失手打碎了甜点,Bottura 却将'破碎'定格成菜:柠檬挞碎裂散落如意外之美——不完美里藏着最动人的故事。","image_hint":"黑盘上'打翻'散落的甜点碎"},{"id":"crenn_seafood","name":"海洋的诗(Le Jardin/海鲜拼贴)","restaurant":"Atelier Crenn","chef":"Dominique Crenn","city":"旧金山","cuisine":"法式艺术","key_ingredients":["scallop","caviar","edible_flower"],"techniques":["cure","spherify"],"vessel":"black_stone_slab","story":"Crenn 以诗代替菜单,每道菜是一行诗句:带子、鱼子酱与花瓣在黑石上如海浪拼贴,把一片海岸的记忆写成可食的诗。","image_hint":"黑石板上海鲜与花的海浪拼贴"},{"id":"tfl_oysters_pearls","name":"生蚝与珍珠(Oysters and Pearls)","restaurant":"The French Laundry","chef":"Thomas Keller","city":"扬特维尔","cuisine":"美式法餐","key_ingredients":["oyster","caviar","potato"],"techniques":["emulsify"],"vessel":"white_porcelain","story":"Keller 的传奇招牌:珍珠般的珍珠麦布丁(tapioca)、生蚝、一撮鱼子酱——奢华与朴素在一勺里达成完美平衡,几十年不下菜单。","image_hint":"白瓷小盅珍珠麦布丁配蚝与鱼子酱"},{"id":"mirazur_garden","name":"花园的礼物(Mirazur 春季)","restaurant":"Mirazur","chef":"Mauro Colagreco","city":"芒通","cuisine":"地中海现代","key_ingredients":["lamb","edible_flower","micro_herb"],"techniques":["char","glaze"],"vessel":"stone_vessel","story":"Colagreco 按月亮历种植与烹饪,菜单随花园与潮汐变化:春季羔羊配自家花园此刻正开的花——盘中是这一天、这片山海的当下切片。","image_hint":"石器上羔羊配缤纷春花"},{"id":"uv_wagyu","name":"和牛的多重感官(Ultraviolet)","restaurant":"Ultraviolet","chef":"Paul Pairet","city":"上海","cuisine":"中式先锋","key_ingredients":["wagyu","black_truffle","gold_leaf"],"techniques":["char","nitro"],"vessel":"black_stone_slab","story":"Pairet 的沉浸式剧场餐厅:一块和牛上桌时,灯光、气味、音乐同步切换成对应的场景——不只吃味道,而是吃一整套被编导的感官体验。","image_hint":"黑石板上炙和牛配松露金箔,戏剧灯光"},{"id":"chairman_crab","name":"花雕蒸血蚶/招牌蒸蟹","restaurant":"The Chairman","chef":"Kwok Keung Tung","city":"香港","cuisine":"粤菜现代","key_ingredients":["king_crab","abalone"],"techniques":["glaze"],"vessel":"lacquer_bowl","story":"亚洲第一的 The Chairman 坚持本地渔获与自酿酱料:陈年花雕与鸡油慢蒸海鲜,把粤菜'镬气'与时令海鲜的鲜甜发挥到极致。","image_hint":"漆碗中花雕蒸蟹/海鲜"},{"id":"frantzen_scallop","name":"炭烤带子与冬味","restaurant":"Frantzén","chef":"Björn Frantzén","city":"斯德哥尔摩","cuisine":"北欧法式","key_ingredients":["scallop","brown_butter","charcoal_oil"],"techniques":["char","torch"],"vessel":"raw_ceramic","story":"Frantzén 融合北欧食材与日式精度:炭火炙带子,焦化黄油与一滴炭烧油勾出烟火气,盛于匠人手作陶器——冬日海洋的浓缩。","image_hint":"粗陶上炭烤带子淋亮油"},{"id":"alchemist_beet","name":"记忆·甜菜与血(Alchemist)","restaurant":"Alchemist","chef":"Rasmus Munk","city":"哥本哈根","cuisine":"整体烹饪","key_ingredients":["beetroot"],"techniques":["ash","ferment"],"vessel":"stone_vessel","story":"Munk 的'整体烹饪'常借菜发声:一道以甜菜拟血、探讨器官捐献或食物伦理的作品,在穹顶剧场下,一道菜就是一场关于社会议题的沉浸对话。","image_hint":"石器上血红甜菜,戏剧氛围"},{"id":"geranium_langoustine","name":"挪威海螯虾与发酵蔬果","restaurant":"Geranium","chef":"Rasmus Kofoed","city":"哥本哈根","cuisine":"北欧新派","key_ingredients":["langoustine","sea_buckthorn","dill"],"techniques":["cure","ferment"],"vessel":"raw_ceramic","story":"三星、曾列世界第一的 Geranium 主打\"轻盈的北欧\":生海螯虾以极短处理保留甜度,佐发酵沙棘与莳萝油,盘面如一幅北欧风景画——精准、清冷、克制。","image_hint":"粗陶上生海螯虾配橙色沙棘点与莳萝"},{"id":"mugaritz_edible_stones","name":"可食的石头(土豆)","restaurant":"Mugaritz","chef":"Andoni Luis Aduriz","city":"圣塞瓦斯蒂安","cuisine":"西班牙前卫","key_ingredients":["potato"],"techniques":["dehydrate"],"vessel":"stone_vessel","story":"Mugaritz 的心理游戏:一盘\"鹅卵石\"端上来,其实是裹了高岭土的小土豆,蘸蒜香乳化酱——挑战你\"能不能吃\"的直觉,把用餐变成一场关于感知的实验。","image_hint":"石器上灰色\"石头\"般的土豆"},{"id":"pujol_mole","name":"母 Mole(千日老酱)","restaurant":"Pujol","chef":"Enrique Olvera","city":"墨西哥城","cuisine":"墨西哥现代","key_ingredients":["mole","corn"],"techniques":["glaze"],"vessel":"black_glaze","story":"Olvera 招牌\"Mole Madre\":一圈新鲜 mole 里嵌一坨已熬煮上千天、每日续锅的老 mole——盘中只有两个同心圆,却是时间与文化的浓缩,极简到近乎观念艺术。","image_hint":"黑盘上两个同心圆的红棕 mole"},{"id":"quintonil_veg","name":"时蔬的礼赞","restaurant":"Quintonil","chef":"Jorge Vallejo","city":"墨西哥城","cuisine":"墨西哥现代","key_ingredients":["heirloom_tomato","corn","edible_flower"],"techniques":["ferment","char"],"vessel":"raw_ceramic","story":"拉美第一的 Quintonil 以本地时蔬为主角:炭烤与发酵的墨西哥物产层层铺陈,证明墨西哥味不只有辣与肉,更有细腻的植物之诗。","image_hint":"粗陶上炭烤时蔬与花"},{"id":"steirereck_char","name":"蜡封红点鲑","restaurant":"Steirereck","chef":"Heinz Reitbauer","city":"维也纳","cuisine":"奥地利现代","key_ingredients":["turbot","beurre_blanc","micro_herb"],"techniques":["sous_vide"],"vessel":"white_porcelain","story":"Steirereck 的招牌:鱼在滚烫的蜂蜡中\"烹\"熟,桌边敲开蜡壳——低温锁住极致的湿润,是一场结合物理与仪式感的桌边表演。","image_hint":"白瓷上湿润白鱼配香草与亮酱"},{"id":"septime_veg","name":"火烤时蔬与自然酒","restaurant":"Septime","chef":"Bertrand Grébaut","city":"巴黎","cuisine":"法式 bistronomy","key_ingredients":["white_asparagus","egg_yolk","morel"],"techniques":["char","confit"],"vessel":"slate","story":"Septime 把三星的严谨拆进轻松的小馆:春季白芦笋炭烤,配溏心蛋与羊肚菌,佐自然酒——高级感来自食材本味与松弛,而非繁复。","image_hint":"暗石板上炭烤白芦笋配溏心蛋"},{"id":"elceller_seafood","name":"地中海海景","restaurant":"El Celler de Can Roca","chef":"Joan Roca","city":"赫罗纳","cuisine":"西班牙前卫","key_ingredients":["sea_bream","squid","salsa_verde"],"techniques":["cure","spherify"],"vessel":"mirror_tray","story":"Roca 兄弟把\"地中海\"做成一口:多种海产以球化、腌渍呈现,佐海藻与青酱,盛于映出蓝光的镜面盘——一场关于家乡海岸的味觉风景。","image_hint":"镜面盘上多种海产拼贴如海景"},{"id":"lespebbles_lamb","name":"盐土羔羊","restaurant":"L'Enclume","chef":"Simon Rogan","city":"卡特梅尔","cuisine":"英伦农场","key_ingredients":["lamb","cabbage","salsa_verde"],"techniques":["char","ferment"],"vessel":"stone_vessel","story":"Rogan 的农场直供哲学:自家牧场的羔羊配盐土卷心菜与发酵香草酱——从土壤到餐盘不足数里,吃的是一整片湖区的风土。","image_hint":"石器上炭烤羔羊配焦叶卷心菜"},{"id":"odette_pigeon","name":"布列斯乳鸽","restaurant":"Odette","chef":"Julien Royer","city":"新加坡","cuisine":"现代法餐","key_ingredients":["squab","cherry","beetroot"],"techniques":["sous_vide","glaze"],"vessel":"black_glaze","story":"亚洲顶尖的 Odette:布列斯乳鸽精准低温后炙皮,配樱桃与甜菜的酸甜土壤味——法餐的优雅在赤道被重新诠释得明亮而精确。","image_hint":"黑盘上炙皮乳鸽配樱桃甜菜"},{"id":"schnitzel_none","name":"白芦笋与黑松露蛋","restaurant":"Amador","chef":"Juan Amador","city":"维也纳","cuisine":"现代欧陆","key_ingredients":["white_asparagus","egg_yolk","black_truffle"],"techniques":["sous_vide"],"vessel":"white_porcelain","story":"三星 Amador 的春季经典:白芦笋、温泉蛋黄与刨得雪片般的黑松露——三种看似朴素的元素叠成极致的奢华,是\"少即是多\"的教科书。","image_hint":"白瓷上白芦笋溏心蛋覆黑松露片"},{"id":"narisawa_soil","name":"森林的土壤(面包汤)","restaurant":"Narisawa","chef":"Yoshihiro Narisawa","city":"东京","cuisine":"日本创新","key_ingredients":["koji_rice","matsutake","micro_herb"],"techniques":["ferment"],"vessel":"clay_pot","story":"Narisawa 的\"里山\"哲学:一碗会在桌上持续发酵、冒泡\"呼吸\"的面包之汤,以曲菌与森林菌物再现土壤的生命力——把日本的自然循环装进一只陶器。","image_hint":"陶器中冒泡的发酵面包汤配菌"},{"id":"lido_risotto","name":"藏红花金箔烩饭","restaurant":"Le Calandre","chef":"Massimiliano Alajmo","city":"帕多瓦","cuisine":"意餐现代","key_ingredients":["risotto_rice","saffron","gold_leaf"],"techniques":["emulsify"],"vessel":"white_porcelain","story":"Alajmo 的传世之作\"金箔藏红花烩饭\":米粒吸饱藏红花的蜜香,铺一层可食金箔——向米兰传统致敬,又以极简的奢华重新定义一盘饭。","image_hint":"白瓷上金黄烩饭覆金箔"},{"id":"boragó_endemic","name":"智利在地风景","restaurant":"Boragó","chef":"Rodolfo Guzmán","city":"圣地亚哥","cuisine":"智利现代","key_ingredients":["king_crab","sea_buckthorn","nasturtium"],"techniques":["cure","dehydrate"],"vessel":"stone_vessel","story":"Boragó 只用智利在地采集物:南部帝王蟹配野生浆果与旱金莲,盘面是巴塔哥尼亚到沙漠的一段地貌——把一个国家的荒野编成菜单。","image_hint":"石器上帝王蟹配野果与叶"},{"id":"lodgings_duck","name":"熟成鸭与无花果","restaurant":"Alléno Paris","chef":"Yannick Alléno","city":"巴黎","cuisine":"现代法餐","key_ingredients":["duck","fig","jus"],"techniques":["confit","glaze"],"vessel":"white_porcelain","story":"Alléno 以\"萃取\"重构酱汁科学:熟成鸭胸配无花果,淋上他用冷萃技术做的极致澄澈浓汁——把法餐的酱汁灵魂推向分子级的纯粹。","image_hint":"白瓷上熟成鸭胸配无花果与亮汁"},{"id":"hof_scallop","name":"炭烤带子与接骨木","restaurant":"Maaemo","chef":"Esben Holmboe Bang","city":"奥斯陆","cuisine":"北欧新派","key_ingredients":["scallop","green_apple","dill"],"techniques":["char","cure"],"vessel":"seashell","story":"挪威三星 Maaemo:挪威扇贝轻炙,配接骨木花与青苹果的清酸,盛于贝壳——极北海洋的纯净与短暂夏日的花香,一口道尽斯堪的纳维亚。","image_hint":"贝壳中炭烤带子配青苹果丁"},{"id":"lodging_tomato","name":"番茄的水与心","restaurant":"Enigma","chef":"Albert Adrià","city":"巴塞罗那","cuisine":"西班牙前卫","key_ingredients":["heirloom_tomato","basil","burrata"],"techniques":["clarify","spherify"],"vessel":"glass_cloche","story":"elBulli 血脉的 Adrià:把番茄\"拆解\"成清澈的番茄水、球化的番茄心与罗勒油,玻璃罩揭开的瞬间释放夏日气息——熟悉的味道被解构成全新的形态。","image_hint":"玻璃罩下清澈番茄水与球化番茄"},{"id":"gaggan_yogurt","name":"瑶柱酸奶爆浆(Lick it up)","restaurant":"Gaggan Anand","chef":"Gaggan Anand","city":"曼谷","cuisine":"前卫印度","key_ingredients":["scallop","yuzu","edible_flower"],"techniques":["spherify","ferment"],"vessel":"slate","story":"亚洲多年第一的 Gaggan:整套菜用 emoji 命名,鼓励你舔盘。招牌爆浆球化把印度香料与海鲜封进一口,颠覆你对\"印度菜\"的全部想象。","image_hint":"黑石板上球化爆珠与花"},{"id":"lesamis_langoustine","name":"海螯虾冷面","restaurant":"Les Amis","chef":"Sebastien Lepinoy","city":"新加坡","cuisine":"现代法餐","key_ingredients":["langoustine","kombu_dashi","micro_herb"],"techniques":["cure","clarify"],"vessel":"white_porcelain","story":"新加坡三星 Les Amis:法式精度遇上亚洲清爽,冰镇海螯虾配澄澈昆布冻高汤——盛夏里一口冷冽的优雅。","image_hint":"白瓷上冰镇海螯虾配清汤冻"},{"id":"jordnaer_seafood","name":"海之馈赠拼盘","restaurant":"Jordnær","chef":"Eric Kragh Vildgaard","city":"哥本哈根","cuisine":"北欧海鲜","key_ingredients":["oyster","caviar","king_crab"],"techniques":["cure"],"vessel":"ice_plate","story":"哥本哈根三星 Jordnær 以海鲜的极致纯净著称:生蚝、帝王蟹配大量鱼子酱,盛于冰盘——不加修饰,只让顶级海产自己说话。","image_hint":"冰盘上生蚝帝王蟹覆鱼子酱"},{"id":"plenilunio_veg","name":"花园的一瞬","restaurant":"Plénitude","chef":"Arnaud Donckele","city":"巴黎","cuisine":"现代法餐","key_ingredients":["white_asparagus","beurre_blanc","edible_flower"],"techniques":["emulsify"],"vessel":"white_porcelain","story":"三星 Plénitude 以酱汁为魂:白芦笋佐一道层次极繁的乳化酱与时令花——Donckele 把酱汁做成一首交响,配角反成主角。","image_hint":"白瓷上白芦笋淋繁复乳化酱配花"},{"id":"schwarzwald_venison","name":"黑森林鹿与樱桃","restaurant":"Schwarzwaldstube","chef":"Torsten Michel","city":"巴伊尔斯布龙","cuisine":"现代德餐","key_ingredients":["venison","cherry","jus"],"techniques":["sous_vide","glaze"],"vessel":"black_glaze","story":"德国三星 Schwarzwaldstube:黑森林鹿里脊配当地酸樱桃与浓缩肉汁——把一片森林的秋天,炖进古典法德料理的严谨里。","image_hint":"黑盘上鹿里脊配樱桃亮汁"},{"id":"benu_xiaolongbao","name":"鱼子酱小笼(Thousand-Year)","restaurant":"Benu","chef":"Corey Lee","city":"旧金山","cuisine":"现代亚裔美餐","key_ingredients":["egg_yolk","caviar","kombu_dashi"],"techniques":["clarify"],"vessel":"lacquer_bowl","story":"三星 Benu 的招牌\"千年老蛋汤\":皮蛋、鱼子酱与澄清高汤,把中式点心与法餐高汤熔于一盅——Corey Lee 用一勺讲亚裔美国人的身份。","image_hint":"漆碗中清汤配皮蛋鱼子酱"},{"id":"quique_paella","name":"海之米饭(解构海鲜饭)","restaurant":"Quique Dacosta","chef":"Quique Dacosta","city":"德尼亚","cuisine":"西班牙前卫","key_ingredients":["risotto_rice","squid","saffron"],"techniques":["dehydrate","emulsify"],"vessel":"black_stone_slab","story":"三星 Quique Dacosta 把西班牙海鲜饭拆解重构:焦脆米粒、墨鱼与藏红花分层呈现,向瓦伦西亚的海岸传统致敬又彻底革新。","image_hint":"黑石板上焦脆米粒配墨鱼"},{"id":"daniel_scallop","name":"带子薄切与柑橘","restaurant":"Daniel","chef":"Daniel Boulud","city":"纽约","cuisine":"现代法餐","key_ingredients":["scallop","lime","micro_herb"],"techniques":["cure"],"vessel":"white_porcelain","story":"纽约名店 Daniel:带子薄切如花瓣铺开,配柑橘油与嫩芽——Boulud 用最克制的法式手法,让一枚扇贝的清甜成为主角。","image_hint":"白瓷上带子薄片如花配柑橘"},{"id":"tim_dimsum","name":"酥皮叉烧包","restaurant":"Tim Ho Wan","chef":"Mak Kwai Pui","city":"香港","cuisine":"粤式点心","key_ingredients":["iberico","brown_butter"],"techniques":["glaze"],"vessel":"wood_board","story":"一星\"最便宜米其林\" Tim Ho Wan 的招牌酥皮叉烧包:菠萝般的酥脆外皮下是甜咸叉烧——证明街头点心的极致,也配得上一颗星。","image_hint":"木板上金黄酥皮叉烧包"},{"id":"ledbury_egg","name":"烟熏土豆与蛋黄","restaurant":"The Ledbury","chef":"Brett Graham","city":"伦敦","cuisine":"现代英餐","key_ingredients":["egg_yolk","potato","charcoal_oil"],"techniques":["smoke","confit"],"vessel":"slate","story":"伦敦二星 The Ledbury 的经典:慢煮蛋黄裹在烟熏土豆与炭油里,撒上脆片——朴素食材经烟火淬炼,成就一口温暖的奢华。","image_hint":"暗石板上流心蛋黄配烟熏土豆"},{"id":"lyle_seasonal","name":"当季一盘(极简英伦)","restaurant":"Lyle's","chef":"James Lowe","city":"伦敦","cuisine":"现代英餐","key_ingredients":["cauliflower","goat_cheese","nasturtium"],"techniques":["char","pickle"],"vessel":"raw_ceramic","story":"伦敦一星 Lyle’s 以极简与当季闻名:炭烤花椰菜配山羊奶酪与旱金莲——盘上只有三四样,却是对英国物产最诚实的表达。","image_hint":"粗陶上炭烤花椰菜配奶酪"},{"id":"florilege_beef","name":"和牛与蔬之环","restaurant":"Florilège","chef":"Hiroyasu Kawate","city":"东京","cuisine":"日式法餐","key_ingredients":["wagyu","carrot","beetroot"],"techniques":["char","ferment"],"vessel":"black_stone_slab","story":"东京二星 Florilège 的招牌:一小片熟成和牛居中,四周环绕大量时蔬——Kawate 以\"少肉多菜\"回应可持续,把配角推向舞台中央。","image_hint":"黑石板上一片和牛环绕时蔬"},{"id":"nabeno_duck","name":"鸭肝与无花果(日法)","restaurant":"Nabeno-Ism","chef":"Yuji Watanabe","city":"东京","cuisine":"日式法餐","key_ingredients":["foie_gras","fig","fig"],"techniques":["confit","caramelize"],"vessel":"white_porcelain","story":"东京一星 Nabeno-Ism:法式鹅肝以日式精度处理,配焦糖无花果——江户下町的市井温度里,藏着法餐的细腻。","image_hint":"白瓷上煎鹅肝配焦糖无花果"},{"id":"indaccent_crab","name":"蟹肉与咖喱叶","restaurant":"Indian Accent","chef":"Manish Mehrotra","city":"新德里","cuisine":"现代印度","key_ingredients":["king_crab","lime","micro_herb"],"techniques":["tempura","cure"],"vessel":"raw_ceramic","story":"现代印度先锋 Indian Accent:帝王蟹配咖喱叶与青柠,把印度香料的层次装进精致小食——传统的味道,当代的语法。","image_hint":"粗陶上蟹肉配香草与青柠"},{"id":"attica_native","name":"澳洲原生植物园","restaurant":"Attica","chef":"Ben Shewry","city":"墨尔本","cuisine":"澳洲现代","key_ingredients":["potato","nasturtium","micro_herb"],"techniques":["ash","ferment"],"vessel":"stone_vessel","story":"墨尔本 Attica 深耕澳洲原住民食材:埋在\"土\"(可食)里的土豆与原生香草——Shewry 用一盘讲述这片大陆最古老的味觉记忆。","image_hint":"石器上埋于可食土的土豆与野草"},{"id":"borago_sea","name":"南冰洋海胆","restaurant":"Boragó","chef":"Rodolfo Guzmán","city":"圣地亚哥","cuisine":"智利现代","key_ingredients":["uni","sea_buckthorn","nori_powder"],"techniques":["cure"],"vessel":"seashell","story":"Boragó 的海洋篇章:智利南部海胆配野生沙棘与海藻粉,盛于贝壳——把巴塔哥尼亚的冷冽海水做成入口即化的一勺。","image_hint":"贝壳中海胆配橙色沙棘点"},{"id":"piazzaduomo_salad","name":"21·31·41 种蔬菜沙拉","restaurant":"Piazza Duomo","chef":"Enrico Crippa","city":"阿尔巴","cuisine":"意餐现代","key_ingredients":["edible_flower","micro_herb","nasturtium"],"techniques":["pickle"],"vessel":"white_porcelain","story":"三星 Piazza Duomo 的传奇沙拉:随季节用上几十种自家菜园的叶、花、芽拼成一幅画——Crippa 把一座花园的当下,原样搬上白瓷。","image_hint":"白瓷上数十种叶花拼成的画"},{"id":"saison_seafood","name":"炭火海产与海藻黄油","restaurant":"Saison","chef":"Joshua Skenes","city":"旧金山","cuisine":"加州炭火","key_ingredients":["sea_bream","beurre_blanc","charcoal_oil"],"techniques":["char","emulsify"],"vessel":"volcanic_rock","story":"旧金山 Saison 以原始炭火著称:海鱼在炭上轻炙,刷海藻黄油,盛于滚烫火山岩——加州的阳光与烟火,浓缩成极简的一块。","image_hint":"火山岩上炭烤海鱼刷亮黄油"},{"id":"reale_egg","name":"洋葱与帕玛森的蛋","restaurant":"Reale","chef":"Niko Romito","city":"卡斯泰尔迪桑格罗","cuisine":"意餐现代","key_ingredients":["egg_yolk","parmesan","white_asparagus"],"techniques":["emulsify","clarify"],"vessel":"white_porcelain","story":"三星 Reale 的 Romito 以\"减法\"闻名:一颗完美的蛋、澄澈的洋葱清汤与帕玛森——把意大利家常味提纯到近乎透明的极致。","image_hint":"白瓷上流心蛋配清汤与奶酪"},{"id":"suhring_thai","name":"泰式蟹肉咖喱(精致版)","restaurant":"Sühring","chef":"Mathias & Thomas Sühring","city":"曼谷","cuisine":"现代德餐","key_ingredients":["king_crab","corn","lime"],"techniques":["emulsify","cure"],"vessel":"lacquer_bowl","story":"曼谷二星 Sühring 双胞胎兄弟做现代德餐:帝王蟹配玉米与青柠的清亮酸,盛于漆器——德式的精准遇上热带的明媚。","image_hint":"漆碗中蟹肉配玉米青柠"}],"CONTEXT":{"seasons":{"spring":{"mood":"清新回暖","palette":["嫩绿","粉白"],"hero":["white_asparagus","lamb","green_pea","rhubarb","morel","strawberry","sea_bream"]},"summer":{"mood":"明亮丰盈","palette":["番茄红","阳光黄"],"hero":["heirloom_tomato","burrata","basil","corn","passion_fruit","eel_unagi","squid"]},"autumn":{"mood":"沉稳丰收","palette":["琥珀","栗棕"],"hero":["matsutake","uni","beetroot","sea_buckthorn","green_apple","porcini","chanterelle","duck","venison","fig","white_truffle"]},"winter":{"mood":"内敛醇厚","palette":["雪白","深灰","金"],"hero":["scallop","oyster","black_truffle","king_crab","foie_gras","yuzu","celeriac","cauliflower"]}},"weather":{"sunny":"明亮天气 → 提亮酸度、清爽脆度、鲜艳花卉(柚子/青柠/花)","rainy":"阴雨 → 温暖高汤、烟熏、发酵深度、慰藉感(昆布高汤/烟熏)","snowy":"雪天 → 醇厚油脂(鹅肝/和牛)、暖汤、根菜甜","foggy":"雾天 → 澄清汤、幽微菌香、朦胧摆盘(松茸/澄清)"}}};</script>
+<!-- __LOGIC__ -->
+<script>
+const DB = window.FDL_DB;
+const byId = id => DB.INGREDIENTS.find(i=>i.id===id) || DB.VESSELS.find(v=>v.id===id);
+const techById = id => DB.TECHNIQUES.find(t=>t.id===id);
+const ART = window.FDL_ART, ING_ART = window.FDL_ING_ART, VESSEL_ART = window.FDL_VESSEL_ART;
+
+/* ================= STATE ================= */
+const state = { season:'winter', vessel:'raw_ceramic', layers:[], name:'未命名之作' };
+// layers: [{ing:<id>, tech:<id|null>}]
+
+const MAX_LAYERS = 12;
+
+/* ---- toast ---- */
+let _toastT=null;
+function toast(msg){
+  let el=document.getElementById('fdl-toast');
+  if(!el){ el=document.createElement('div'); el.id='fdl-toast';
+    el.style.cssText='position:fixed;left:50%;bottom:32px;transform:translateX(-50%);background:#1a1712;color:#e8dcc0;border:1px solid #4a4636;padding:10px 18px;border-radius:24px;font-size:13px;z-index:200;box-shadow:0 8px 30px rgba(0,0,0,.6);opacity:0;transition:opacity .2s;font-family:var(--sans)';
+    document.body.appendChild(el); }
+  el.textContent=msg; el.style.opacity='1';
+  clearTimeout(_toastT); _toastT=setTimeout(()=>el.style.opacity='0',2200);
+}
+
+/* ---- menu store (localStorage) ---- */
+const MENU_KEY='fdl_menu_v1';
+function loadMenu(){ try{ return JSON.parse(localStorage.getItem(MENU_KEY)||'[]'); }catch(e){ return []; } }
+function saveMenu(m){ try{ localStorage.setItem(MENU_KEY, JSON.stringify(m)); }catch(e){} }
+function saveCurrentToMenu(){
+  if(!state.layers.length){ toast('先做一道菜再收藏'); return; }
+  const m=loadMenu();
+  const {score}=evaluate();
+  m.push({ id:'d'+Date.now(), name:state.name, vessel:state.vessel, season:state.season,
+           layers:JSON.parse(JSON.stringify(state.layers)), score, ts:Date.now() });
+  saveMenu(m); toast(`已收进菜单 · 共 ${m.length} 道`);
+}
+function deleteFromMenu(id){ saveMenu(loadMenu().filter(d=>d.id!==id)); openMenu(); }
+function loadDishFromMenu(id){
+  const d=loadMenu().find(x=>x.id===id); if(!d)return;
+  state.layers=JSON.parse(JSON.stringify(d.layers)); state.vessel=d.vessel; state.season=d.season; state.name=d.name;
+  renderVessels(); renderContext(); renderCard(); renderStage(); closeModal(); toast('已载入到组装台');
+}
+
+
+/* ================= 2D SCREEN-PRINT COMPOSITOR ================= */
+const STAGE_W=760, STAGE_H=560, STAGE_CX=STAGE_W/2, STAGE_CY=STAGE_H/2+10;
+let rot = 0;                 // whole-dish rotation angle (degrees)
+let autoRotate = true, rotTimer = null;
+let _dragLayer = -1;         // index being dragged, or -1
+
+// assign a default fanned position to a newly added layer
+function defaultPos(idx, n){
+  if(idx===0) return {x:-6,y:10,s:1.15};
+  const R=64, Ry=30, i=idx-1, ringN=Math.max(1,n-1);
+  const a=(i/ringN)*Math.PI*2 + 0.7;
+  return {x:Math.cos(a)*R, y:-8+Math.sin(a)*Ry, s:0.82-i*0.03};
+}
+// ensure every layer has a pos (older/loaded dishes may lack one)
+function ensurePositions(){
+  const n=state.layers.length;
+  state.layers.forEach((L,idx)=>{ if(!L.pos) L.pos = defaultPos(idx,n); });
+}
+
+function renderStage(){
+  const host = document.getElementById('stage-3d');
+  const cx=STAGE_CX, cy=STAGE_CY;
+  ensurePositions();
+  ART.resetDefs();
+  const vArt = VESSEL_ART[state.vessel] ? VESSEL_ART[state.vessel]() : '';
+  let dish='';
+  state.layers.forEach((L,idx)=>{
+    const fn = ING_ART[L.ing]; if(!fn) return;
+    const p = L.pos || {x:0,y:0,s:1};
+    // technique halo (drawn under the item)
+    if(L.tech==='char'||L.tech==='torch'){ dish += `<ellipse cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" rx="${(52*p.s).toFixed(0)}" ry="${(24*p.s).toFixed(0)}" fill="#e07a30" opacity=".07"/>`; }
+    if(L.tech==='smoke'||L.tech==='ash'){ dish += `<path d="M${p.x.toFixed(0)} ${(p.y-20).toFixed(0)} q14 -30 2 -56 q-8 -18 8 -36" stroke="#cfd4d8" stroke-width="5" fill="none" opacity=".14" stroke-linecap="round"/>`; }
+    // the item — wrapped in a hit-target group carrying its index
+    dish += `<g class="fdl-layer" data-layer="${idx}" style="cursor:grab" transform="translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) scale(${p.s.toFixed(2)})">${fn()}</g>`;
+  });
+  const defs = ART.collectDefs();
+  const emptyHint = state.layers.length ? '' :
+    `<text x="0" y="0" text-anchor="middle" font-size="20" fill="#4a4740" font-family="'Cormorant Garamond',serif" letter-spacing="2">从素材库开始你的创作</text>`;
+  // whole dish group rotates around plate center; plate + food together
+  const svg =
+    `<svg id="fdl-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+      <defs>${defs}
+        <radialGradient id="fdl-spot" cx="50%" cy="42%" r="55%"><stop offset="0%" stop-color="#3a352c" stop-opacity=".55"/><stop offset="55%" stop-color="#1a1712" stop-opacity="0"/></radialGradient>
+        <radialGradient id="fdl-vig" cx="50%" cy="46%" r="72%"><stop offset="55%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".72"/></radialGradient>
+        <filter id="fdl-grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .04 0"/></filter>
+      </defs>
+      <rect width="${STAGE_W}" height="${STAGE_H}" fill="#141210"/>
+      <rect width="${STAGE_W}" height="${STAGE_H}" fill="url(#fdl-spot)"/>
+      <g transform="translate(${cx} ${cy}) rotate(${rot.toFixed(2)})">
+        ${vArt}
+        ${dish}
+        ${emptyHint}
+      </g>
+      <rect width="${STAGE_W}" height="${STAGE_H}" fill="url(#fdl-vig)" pointer-events="none"/>
+      <rect width="${STAGE_W}" height="${STAGE_H}" filter="url(#fdl-grain)" opacity=".5" pointer-events="none"/>
+      <g stroke="#7a7566" stroke-width="1" opacity=".4" pointer-events="none">
+        <g transform="translate(28 28)"><line x1="-7" y1="0" x2="7" y2="0"/><line x1="0" y1="-7" x2="0" y2="7"/><circle r="5" fill="none"/></g>
+        <g transform="translate(${STAGE_W-28} 28)"><line x1="-7" y1="0" x2="7" y2="0"/><line x1="0" y1="-7" x2="0" y2="7"/><circle r="5" fill="none"/></g>
+        <g transform="translate(28 ${STAGE_H-28})"><line x1="-7" y1="0" x2="7" y2="0"/><line x1="0" y1="-7" x2="0" y2="7"/><circle r="5" fill="none"/></g>
+      </g>
+      <text x="${cx}" y="${STAGE_H-22}" text-anchor="middle" font-size="10" letter-spacing="4" fill="#6a6456" font-family="Georgia" pointer-events="none">FINE DINING LAB · SCREEN-PRINT · 拖动摆盘</text>
+    </svg>`;
+  host.innerHTML = svg;
+  attachDrag();
+}
+
+/* ---- drag to reposition a layer (pauses auto-rotate) ---- */
+function attachDrag(){
+  const svg=document.getElementById('fdl-svg'); if(!svg) return;
+  // map client px -> svg user units, then subtract plate-center + un-rotate
+  function toDish(evt){
+    const r=svg.getBoundingClientRect();
+    const sx=(evt.clientX-r.left)/r.width*STAGE_W - STAGE_CX;
+    const sy=(evt.clientY-r.top)/r.height*STAGE_H - STAGE_CY;
+    const a=-rot*Math.PI/180, c=Math.cos(a), s=Math.sin(a);
+    return { x:sx*c - sy*s, y:sx*s + sy*c };
+  }
+  svg.querySelectorAll('.fdl-layer').forEach(g=>{
+    g.addEventListener('pointerdown',ev=>{
+      ev.preventDefault();
+      _dragLayer=+g.dataset.layer; autoRotate=false;
+      g.setPointerCapture(ev.pointerId); g.style.cursor='grabbing';
+    });
+    g.addEventListener('pointermove',ev=>{
+      if(_dragLayer<0 || +g.dataset.layer!==_dragLayer) return;
+      const p=toDish(ev); const L=state.layers[_dragLayer];
+      if(L){ L.pos.x=Math.max(-150,Math.min(150,p.x)); L.pos.y=Math.max(-110,Math.min(110,p.y)); renderStage(); }
+    });
+    const end=ev=>{ if(_dragLayer>=0){ _dragLayer=-1; renderStage(); } };
+    g.addEventListener('pointerup',end);
+    g.addEventListener('pointercancel',end);
+  });
+}
+
+function buildVessel(){ renderStage(); }
+function rebuildDish(){ renderStage(); }
+function startAutoRotate(){
+  if(rotTimer) clearInterval(rotTimer);
+  rotTimer = setInterval(()=>{ if(autoRotate && state.layers.length>=1 && _dragLayer<0){ rot=(rot+2)%360; renderStage(); } }, 90);
+}
+function initStage(){ renderStage(); startAutoRotate(); }
+
+
+
+/* ================= UI RENDER ================= */
+const CAT_NAMES={seafood:'海鲜',meat:'肉·禽·野味',vegetable:'蔬菜·根茎',fungi:'菌菇',fruit:'水果',acid:'酸源',dairy:'乳·蛋',grain:'谷物',spice:'香料·香草',sauce:'酱汁·基底',garnish:'点缀',texture:'质地脆片'};
+const CAT_ORDER=['seafood','meat','vegetable','fungi','fruit','acid','dairy','grain','spice','sauce','garnish','texture'];
+
+/* favorites (localStorage) + active category filter */
+const FAV_KEY='fdl_favs_v1';
+function loadFavs(){ try{return new Set(JSON.parse(localStorage.getItem(FAV_KEY)||'[]'));}catch(e){return new Set();} }
+function saveFavs(s){ try{localStorage.setItem(FAV_KEY,JSON.stringify([...s]));}catch(e){} }
+let favs=loadFavs();
+let activeCat='all'; // 'all' | 'fav' | a cat id
+function toggleFav(id){ if(favs.has(id))favs.delete(id); else favs.add(id); saveFavs(favs); renderPantry(document.getElementById('search').value); }
+
+function renderCatFilter(){
+  const el=document.getElementById('cat-filter'); if(!el)return;
+  const tabs=[['all','全部'],['fav','★ 收藏']].concat(CAT_ORDER.map(c=>[c,CAT_NAMES[c]]));
+  el.innerHTML=tabs.map(([k,label])=>`<span class="catchip ${activeCat===k?'on':''}" data-cat="${k}">${label}</span>`).join('');
+}
+function ingRow(i){
+  const on=favs.has(i.id)?'on':'';
+  return `<div class="ing" data-add="${i.id}"><span class="dot" style="background:${i.color}"></span><span class="nm">${i.name}</span><span class="tier ${i.tier}">${i.tier==='rare'?'珍稀':i.tier==='premium'?'高级':'常见'}</span><span class="fav ${on}" data-fav="${i.id}" title="收藏">${favs.has(i.id)?'★':'☆'}</span></div>`;
+}
+function renderPantry(filter=''){
+  const q=filter.trim().toLowerCase();
+  const list=document.getElementById('pantry-list'); let h='';
+  const match=i=>!q||(i.name+i.flavor.join()+i.texture.join()+(i.ref||'')).toLowerCase().includes(q);
+  if(activeCat==='fav'){
+    const items=DB.INGREDIENTS.filter(i=>favs.has(i.id)&&match(i));
+    h = items.length ? `<div class="cat-h">★ 我的收藏</div>`+items.map(ingRow).join('')
+        : '<div style="color:var(--muted);padding:20px;text-align:center;font-size:12px">还没有收藏 —— 点食材右侧的 ☆ 收藏常用的。</div>';
+  } else {
+    const cats = activeCat==='all' ? CAT_ORDER : [activeCat];
+    cats.forEach(cat=>{
+      let items=DB.INGREDIENTS.filter(i=>i.cat===cat&&match(i));
+      if(!items.length) return;
+      h+=`<div class="cat-h">${CAT_NAMES[cat]||cat}</div>`;
+      h+=items.map(ingRow).join('');
+    });
+    h = h || '<div style="color:var(--muted);padding:20px;text-align:center">无匹配食材</div>';
+  }
+  list.innerHTML=h;
+}
+function renderVessels(){
+  document.getElementById('vessel-strip').innerHTML = DB.VESSELS.map(v=>`<div class="vchip ${v.id===state.vessel?'on':''}" data-vessel="${v.id}">${v.name.split(' ')[0]}</div>`).join('');
+}
+function renderContext(){
+  const seasons={spring:'🌱 春',summer:'☀ 夏',autumn:'🍂 秋',winter:'❄ 冬'};
+  document.getElementById('season-chips').innerHTML=Object.entries(seasons).map(([k,v])=>`<span class="chip ${state.season===k?'on':''}" data-season="${k}">${v}</span>`).join('');
+}
+
+/* ---- reasonableness engine ---- */
+function evaluate(){
+  const ids=state.layers.map(l=>l.ing);
+  let score = ids.length?58:0; const notes=[];
+  const pairKey=(a,b)=>[a,b].sort().join('|');
+  const seen=new Set();
+  for(let a=0;a<ids.length;a++)for(let b=a+1;b<ids.length;b++){
+    const k=pairKey(ids[a],ids[b]); if(seen.has(k))continue; seen.add(k);
+    const P=DB.PAIRINGS.find(p=>pairKey(p[0],p[1])===k);
+    if(P){score+=11;notes.push({t:'ok',x:'✓ '+P[2]});}
+    const T=DB.TABOOS.find(t=>pairKey(t.pair[0],t.pair[1])===k);
+    if(T){score-=(T.level==='avoid'?28:14);notes.push({t:T.level,x:(T.level==='avoid'?'✕ ':'⚠ ')+T.why});}
+  }
+  // rule: delicate seafood + heavy smoke tech
+  const delicate=['uni','scallop','oyster','amaebi'];
+  const heavySmoke=state.layers.some(l=>['smoke','char','ash'].includes(l.tech));
+  if(heavySmoke && ids.some(i=>delicate.includes(i))) { score-=10; notes.push({t:'warn',x:'⚠ 娇嫩生食海鲜遇重烟熏/炭火,海洋细腻易被烟味盖过'}); }
+  // structure bonus: balanced 3-5 layers with acid+texture
+  const cats=state.layers.map(l=>byId(l.ing)?.cat);
+  if(ids.length>=3&&ids.length<=6){score+=6;}
+  if(cats.includes('acid')) score+=4; if(cats.includes('texture')||cats.includes('garnish')) score+=4;
+  // season resonance
+  const hero=DB.CONTEXT.seasons[state.season].hero;
+  if(ids.some(i=>hero.includes(i))){score+=5;notes.push({t:'tip',x:'◆ 呼应了'+({spring:'春',summer:'夏',autumn:'秋',winter:'冬'}[state.season])+'季时令,加分'});}
+  score=Math.max(0,Math.min(100,Math.round(score)));
+  return {score,notes};
+}
+
+/* ---- C4: flavor profile (6 axes) from ingredient flavor/texture keywords ---- */
+const FLAVOR_AXES=[
+  {key:'sweet',label:'甜',kw:['清甜','甜','蜜','奶香','果香','焦糖','脂甜']},
+  {key:'acid',label:'酸',kw:['酸','清冽','柑橘','花酸','发酵']},
+  {key:'umami',label:'鲜',kw:['鲜','浓鲜','咸鲜','海洋','umami','矿物']},
+  {key:'fat',label:'脂',kw:['油','脂','黄油','奶脂','丰腴','即化','绵密','流心']},
+  {key:'aroma',label:'香',kw:['菌','松木','坚果','香料','烟熏','焦香','草本','茴香','麝香','花香','蒜']},
+  {key:'bitter',label:'苦·辛',kw:['苦','辛','胡椒','涩','辣']}
+];
+function flavorProfile(){
+  const axes=Object.fromEntries(FLAVOR_AXES.map(a=>[a.key,0]));
+  state.layers.forEach(l=>{
+    const ing=byId(l.ing); if(!ing)return;
+    const words=(ing.flavor||[]).concat(ing.texture||[]);
+    FLAVOR_AXES.forEach(a=>{ if(words.some(w=>a.kw.some(k=>w.includes(k)))) axes[a.key]+=1; });
+    // technique nudges
+    if(['char','smoke','ash','torch'].includes(l.tech)) axes.aroma+=0.6;
+    if(['ferment','cure','pickle','cure_gravlax'].includes(l.tech)) axes.acid+=0.5;
+    if(['confit','emulsify'].includes(l.tech)) axes.fat+=0.4;
+    if(l.tech==='caramelize') axes.sweet+=0.5;
+  });
+  const max=Math.max(1,...Object.values(axes));
+  return FLAVOR_AXES.map(a=>({...a, raw:axes[a.key], v: axes[a.key]/max}));
+}
+function renderRadar(){
+  const el=document.getElementById('flavor-radar'); if(!el)return;
+  const prof=flavorProfile();
+  if(!state.layers.length){ el.innerHTML='<div style="color:var(--muted);font-size:11px;padding:14px 0">加入食材后,这里显示风味平衡</div>'; return; }
+  const cx=120,cy=112,R=78,n=prof.length;
+  const pt=(i,r)=>{const ang=-Math.PI/2+i*2*Math.PI/n;return [cx+Math.cos(ang)*r, cy+Math.sin(ang)*r];};
+  let grid=''; [0.25,0.5,0.75,1].forEach(f=>{
+    const poly=prof.map((_,i)=>pt(i,R*f).map(x=>x.toFixed(1)).join(',')).join(' ');
+    grid+=`<polygon points="${poly}" fill="none" stroke="#3a3830" stroke-width="1" opacity="${f===1?.6:.3}"/>`;
+  });
+  let spokes='',labels='';
+  prof.forEach((a,i)=>{
+    const [x,y]=pt(i,R); spokes+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#3a3830" stroke-width="1" opacity=".4"/>`;
+    const [lx,ly]=pt(i,R+16); labels+=`<text x="${lx.toFixed(1)}" y="${(ly+4).toFixed(1)}" text-anchor="middle" font-size="12" fill="#c8a15a" font-family="var(--sans)">${a.label}</text>`;
+  });
+  const poly=prof.map((a,i)=>pt(i,R*Math.max(0.06,a.v)).map(x=>x.toFixed(1)).join(',')).join(' ');
+  const dots=prof.map((a,i)=>{const [x,y]=pt(i,R*Math.max(0.06,a.v));return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="#e8c884"/>`;}).join('');
+  el.innerHTML=`<svg viewBox="0 0 240 224"><defs><radialGradient id="rdf" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="#e8c884" stop-opacity=".38"/><stop offset="100%" stop-color="#c8a15a" stop-opacity=".14"/></radialGradient></defs>${grid}${spokes}<polygon points="${poly}" fill="url(#rdf)" stroke="#e8c884" stroke-width="2"/>${dots}${labels}</svg>`;
+}
+
+/* ---- C2: chef critique (judge-style verdict + highlight + fix + one concrete move) ---- */
+function critique(score,notes){
+  const el=document.getElementById('critique'); if(!el)return;
+  if(!state.layers.length){ el.className=''; el.innerHTML=''; return; }
+  const ids=state.layers.map(l=>l.ing);
+  const cats=state.layers.map(l=>byId(l.ing)?.cat);
+  const prof=flavorProfile();
+  const has=c=>cats.includes(c);
+  const verdict = score>=90?'惊艳之作 · 大胆而克制':score>=78?'成熟的一盘 · 有主张':score>=62?'方向对了 · 还差打磨':score>=45?'尚显生涩 · 需要重心':'散乱 · 先立一个主角';
+  // highlight: best pairing note, else the hero/structure
+  const okNote=notes.find(n=>n.t==='ok');
+  const hi = okNote ? okNote.x.replace('✓ ','') :
+    (has('acid')&&(has('meat')||has('seafood')) ? '荤鲜与酸度形成了呼应,入口不腻。' :
+     ids.length>=3 ? '层次数量得当,有咀嚼的节奏。' : '选材干净,重点清晰。');
+  // improvement: pick the most pressing gap
+  let fix, move;
+  const avoid=notes.find(n=>n.t==='avoid'), warn=notes.find(n=>n.t==='warn');
+  const domFat=prof.find(p=>p.key==='fat').raw, acidV=prof.find(p=>p.key==='acid').raw;
+  if(avoid){ fix='有一组食材在风味上强烈打架,拉低了整体。'; move='去掉冲突项之一,或用一层酸/脆把它们隔开。'; }
+  else if(warn){ fix='存在一处风味压制的风险,主角的细腻可能被盖住。'; move='把强味那层减量,或换一个更轻的处理(生/渍代替炭烤)。'; }
+  else if(domFat>=2&&acidV===0){ fix='油脂偏重却没有酸度收口,后段会腻。'; move='加一层柚子/大黄/沙棘,或一点腌渍果实提亮。'; }
+  else if(!has('texture')&&!has('garnish')){ fix='口感偏单一,缺一层脆或点缀。'; move='撒荞麦脆/薄脆瓦片,或点几朵可食用花做视觉与咬感。'; }
+  else if(ids.length<3){ fix='层次略少,主张还不够饱满。'; move='再叠 1–2 层呼应主角的配角(参考"找相近名菜")。'; }
+  else if(!has('sauce')){ fix='少了一层把各元素连起来的酱汁/基底。'; move='淋一道对味的酱(海鲜配白黄油,红肉配浓缩肉汁)。'; }
+  else { fix='结构已相当完整。'; move='想更进一步,就在器皿与技法上做戏剧化处理(玻璃罩烟熏 / 球化爆珠)。'; }
+  el.className='on';
+  el.innerHTML=`<div class="cq-tag">主厨点评 · CHEF'S NOTE</div>
+    <div class="cq-verdict">${verdict}</div>
+    <div class="cq-line"><b>亮点</b> ${hi}</div>
+    <div class="cq-line"><b>可改进</b> ${fix}</div>
+    <div class="cq-line"><b>建议</b> ${move}</div>`;
+}
+function starStr(score){ const s=score>=90?3:score>=78?2:score>=62?1:0; return '★'.repeat(s).padEnd(3,'☆').split('').map(c=>`<span style="color:${c==='★'?'var(--gold2)':'#3a3830'}">${c}</span>`).join(''); }
+
+function renderCard(){
+  const {score,notes}=evaluate();
+  document.getElementById('dish-name').textContent=state.name;
+  document.getElementById('dish-sub').textContent = state.layers.length? `${DB.VESSELS.find(v=>v.id===state.vessel).name} · ${state.layers.length} 层` : '点击命名 · 或让主厨随机生成';
+  document.getElementById('score').textContent = state.layers.length?score:'—';
+  document.getElementById('score').style.color = score>=78?'var(--ok)':score>=62?'var(--gold2)':'var(--warn)';
+  document.getElementById('stars').innerHTML = state.layers.length?starStr(score):'';
+  renderRadar();
+  critique(score,notes);
+  // layers with per-layer technique picker
+  document.getElementById('layers').innerHTML = state.layers.map((L,idx)=>{
+    const ing=byId(L.ing);
+    const techOpts = ['<option value="">— 生/原味 —</option>'].concat(
+      DB.TECHNIQUES.filter(t=>t.good_for.includes(ing.cat)).map(t=>`<option value="${t.id}" ${L.tech===t.id?'selected':''}>${t.name.split(' ')[0]}</option>`)
+    ).join('');
+    return `<div class="layer"><span class="dot" style="background:${ing.color}"></span>
+      <span class="li-nm">${ing.name.split(' ')[0]}<div class="li-t">${ing.flavor.slice(0,2).join(' · ')}</div></span>
+      <select class="tech-sel" data-tech-idx="${idx}">${techOpts}</select>
+      <button class="rm" data-rm="${idx}">×</button></div>`;
+  }).join('') || '<div style="color:var(--muted);font-size:12px;padding:12px 0">还没有层次。点左侧食材开始堆叠。</div>';
+  document.getElementById('notes').innerHTML = notes.map(n=>`<div class="note ${n.t}">${n.x}</div>`).join('');
+  document.getElementById('ai-tip').textContent='';
+  document.getElementById('layer-count').textContent = state.layers.length? `${state.layers.length} 层 · 评分 ${score}` : '';
+}
+
+/* ---- AI inspiration ---- */
+function aiInspire(){
+  const ids=state.layers.map(l=>l.ing); const cats=state.layers.map(l=>byId(l.ing)?.cat);
+  const has=id=>ids.includes(id); let tip;
+  const seasonHero=DB.CONTEXT.seasons[state.season].hero.filter(h=>!has(h));
+  if(!ids.length){ const h=seasonHero[0]; const ing=byId(h); tip=`空盘起手,不妨从当季主角「${ing?.name.split(' ')[0]}」开始 —— ${DB.CONTEXT.seasons[state.season].mood}的气息。`; }
+  else {
+    // compound-graph recommendation (food-pairing hypothesis: shared aroma families)
+    const F=window.FDL_FLAVOR;
+    const allIds=DB.INGREDIENTS.map(i=>i.id);
+    const classic=new Set(DB.PAIRINGS.map(p=>[p[0],p[1]].sort().join('|')));
+    const recs=F? F.recommend(ids, allIds, {catOf:id=>byId(id)?.cat, classicPairs:classic, n:5}) : [];
+    // prefer a rec that also fills a structural gap (acid / texture) when one is missing
+    const needAcid=!cats.includes('acid')&&!cats.includes('fruit');
+    const needTex=!cats.includes('texture')&&!cats.includes('garnish');
+    let pick=recs[0];
+    if(needAcid){ const a=recs.find(r=>['acid','fruit'].includes(byId(r.id)?.cat)); if(a)pick=a; }
+    else if(needTex){ const t=recs.find(r=>['texture','garnish'].includes(byId(r.id)?.cat)); if(t)pick=t; }
+    if(pick){
+      const ing=byId(pick.id);
+      const famLabels=(pick.via||[]).map(f=>F.FAMILIES[f]?.label.split('·')[0]).filter(Boolean).slice(0,3);
+      if(pick.kind==='classic'){
+        const cp=DB.PAIRINGS.find(p=>{const k=[p[0],p[1]].sort().join('|'); return ids.some(cur=>[cur,pick.id].sort().join('|')===k);});
+        tip=`试试加入「${ing.name.split(' ')[0]}」—— ${cp?cp[2]:'名厨验证过的经典搭配'}。`;
+      } else if(famLabels.length){
+        tip=`试试加入「${ing.name.split(' ')[0]}」—— 它与盘中食材共享「${famLabels.join('·')}」类香气分子,同源相衬(风味图谱推荐)。`;
+      } else {
+        tip=`试试加入「${ing.name.split(' ')[0]}」,能补足当前风味的平衡。`;
+      }
+      if(needAcid) tip+=' ｜ 这也给偏重的风味补上一层酸度。';
+      else if(needTex) tip+=' ｜ 同时补一层脆感/点缀,提升口感与视觉。';
+    } else {
+      tip='结构已很完整。想更大胆?换个戏剧化器皿(烟熏木盒/玻璃罩/火山岩),或用发酵/球化技法重构某一层。';
+    }
+  }
+  document.getElementById('ai-tip').textContent='✨ '+tip;
+}
+
+/* ---- recipe matching ---- */
+function matchDish(){
+  if(!state.layers.length){ openModal('<div class="mlabel">提示</div><h2>先做一道菜</h2><div class="story">盘子还是空的 —— 从左侧选几样食材堆叠起来,我再帮你在名厨菜品库里找最相近的一道。</div><button class="btn gold close" data-act="close-modal">好的</button>'); return; }
+  const myIng=new Set(state.layers.map(l=>l.ing));
+  const myTech=new Set(state.layers.map(l=>l.tech).filter(Boolean));
+  let best=null,bestScore=-1;
+  DB.SIGNATURE_DISHES.forEach(d=>{
+    const di=new Set(d.key_ingredients), dt=new Set(d.techniques||[]);
+    let inter=0; myIng.forEach(i=>{if(di.has(i))inter++;});
+    const union=new Set([...myIng,...di]).size;
+    let s = union? inter/union : 0;            // 食材 Jaccard
+    let ti=0; myTech.forEach(t=>{if(dt.has(t))ti++;});
+    s = s*0.7 + (dt.size?ti/dt.size:0)*0.18;   // 技法相似
+    if(d.vessel===state.vessel) s+=0.08;       // 器皿呼应
+    // cuisine/season soft bonus via shared flavor cats
+    const myCats=new Set(state.layers.map(l=>byId(l.ing)?.cat));
+    const dCats=new Set(d.key_ingredients.map(i=>byId(i)?.cat));
+    let ci=0; myCats.forEach(c=>{if(dCats.has(c))ci++;});
+    s += (myCats.size?ci/myCats.size:0)*0.12;
+    if(s>bestScore){bestScore=s;best=d;}
+  });
+  const pct=Math.round(bestScore*100);
+  const kIngNames=best.key_ingredients.map(i=>byId(i)?.name.split(' ')[0]).join('、');
+  const shared=best.key_ingredients.filter(i=>myIng.has(i)).map(i=>byId(i)?.name.split(' ')[0]);
+  openModal(`
+    <div class="mlabel">最相近的名厨之作 · ${pct}% 神似</div>
+    <h2>${best.name}</h2>
+    <div class="rest">${best.restaurant} &nbsp;·&nbsp; 主厨 ${best.chef}</div>
+    <div class="meta">${best.city} · ${best.cuisine}</div>
+    <div class="story">${best.story}</div>
+    <div class="sim">核心食材:${kIngNames}<br>${shared.length?'你与它共享了:'+shared.map(s=>`<span class="badge">${s}</span>`).join(''):'你走了一条不同的路 —— 灵感相通,选材各异。'}</div>
+    <button class="btn gold close" data-act="close-modal">继续创作</button>
+  `);
+}
+function openModal(html){ document.getElementById('modal-body').innerHTML=html; document.getElementById('modal').classList.add('on'); }
+function closeModal(){ document.getElementById('modal').classList.remove('on'); }
+
+/* ---- demo dishes (from real signatures we can rebuild) ---- */
+const REBUILDABLE = ['saito_uni','ryugin_matsutake','frantzen_scallop','tfl_oysters_pearls','emp_oyster_apple','arpege_carrot'];
+let demoIdx=0;
+function loadDemo(){
+  const d = DB.SIGNATURE_DISHES.find(x=>x.id===REBUILDABLE[demoIdx % REBUILDABLE.length]); demoIdx++;
+  state.layers = d.key_ingredients.map((i,k)=>({ing:i, tech:(d.techniques&&d.techniques[k])||d.techniques?.[0]||null}));
+  state.vessel = d.vessel; state.name = d.name;
+  renderVessels(); buildVessel(); rebuildDish(); renderCard();
+}
+/* ---- random chef inspiration ---- */
+function randomDish(){
+  const s=state.season; const hero=DB.CONTEXT.seasons[s].hero;
+  const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+  const layers=[];
+  const main=byId(pick(hero.filter(h=>{const g=byId(h);return g&&(g.cat==='seafood'||g.cat==='meat'||g.cat==='vegetable'||g.cat==='fungi');})||hero));
+  if(main)layers.push({ing:main.id,tech:pick(DB.TECHNIQUES.filter(t=>t.good_for.includes(main.cat))).id});
+  // find a real pairing partner
+  const pr=DB.PAIRINGS.filter(p=>p[0]===main?.id||p[1]===main?.id); if(pr.length){const P=pick(pr);const partner=P[0]===main.id?P[1]:P[0];layers.push({ing:partner,tech:null});}
+  // add texture + garnish
+  layers.push({ing:pick(DB.INGREDIENTS.filter(i=>i.cat==='texture')).id,tech:null});
+  layers.push({ing:pick(DB.INGREDIENTS.filter(i=>i.cat==='garnish')).id,tech:null});
+  state.layers=layers.filter(l=>l.ing);
+  state.vessel=pick(DB.VESSELS).id;
+  const adj=['静','影','忆','初','霜','焰','潮','林'];const noun=['之味','之诗','小品','协奏','切片','絮语'];
+  state.name=pick(adj)+DB.CONTEXT.seasons[s].mood[0]+pick(noun);
+  renderVessels();buildVessel();rebuildDish();renderCard();
+}
+
+/* ================= IMAGE EXPORT + MENU ================= */
+function composeDishArt(cx, cy, scale){
+  ensurePositions();
+  ART.resetDefs();
+  const vArt = VESSEL_ART[state.vessel] ? VESSEL_ART[state.vessel]() : '';
+  let dish='';
+  state.layers.forEach((L)=>{ const fn=ING_ART[L.ing]; if(!fn)return; const p=L.pos||{x:0,y:0,s:1};
+    dish += `<g transform="translate(${(p.x).toFixed(1)} ${(p.y).toFixed(1)}) scale(${p.s.toFixed(2)})">${fn()}</g>`; });
+  const inner = `<g transform="translate(${cx} ${cy}) scale(${scale})"><g>${vArt}</g>${dish}</g>`;
+  return { inner, defs: ART.collectDefs() };
+}
+function buildDishPosterSVG(){
+  const W=1080,Hh=1620;
+  const {inner,defs}=composeDishArt(W/2, 640, 3.0);
+  const {score}=evaluate();
+  const stars = score>=90?'★★★':score>=78?'★★':score>=62?'★':'';
+  const vesselName=(DB.VESSELS.find(v=>v.id===state.vessel)||{}).name||'';
+  const seasonName={spring:'SPRING 春',summer:'SUMMER 夏',autumn:'AUTUMN 秋',winter:'WINTER 冬'}[state.season];
+  const ingLine = state.layers.map(l=>{const g=byId(l.ing);const t=l.tech?techById(l.tech):null;
+    return (g?g.name.split(' ')[0]:'') + (t?`·${t.name.split(' ')[0]}`:'');}).join('   /   ');
+  const flavorTags=[...new Set(state.layers.flatMap(l=>byId(l.ing)?.flavor||[]))].slice(0,5).join(' · ');
+  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${Hh}" width="${W}" height="${Hh}"><defs>${defs}
+    <radialGradient id="ps-spot" cx="50%" cy="38%" r="52%"><stop offset="0%" stop-color="#3a352c" stop-opacity=".6"/><stop offset="60%" stop-color="#12100c" stop-opacity="0"/></radialGradient>
+    <radialGradient id="ps-vig" cx="50%" cy="40%" r="75%"><stop offset="52%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity=".8"/></radialGradient></defs>
+    <rect width="${W}" height="${Hh}" fill="#141210"/>
+    <rect width="${W}" height="${Hh}" fill="url(#ps-spot)"/>
+    <text x="${W/2}" y="150" text-anchor="middle" font-size="26" letter-spacing="10" fill="#8a8168" font-family="Georgia">FINE DINING LAB</text>
+    <text x="${W/2}" y="196" text-anchor="middle" font-size="20" letter-spacing="6" fill="#c8a15a" font-family="Georgia">${seasonName}</text>
+    ${inner}
+    <rect width="${W}" height="${Hh}" fill="url(#ps-vig)"/>
+    <line x1="${W/2-120}" y1="1010" x2="${W/2+120}" y2="1010" stroke="#6a6250" stroke-width="1"/>
+    <text x="${W/2}" y="1090" text-anchor="middle" font-size="58" fill="#f0e8d6" font-family="'Cormorant Garamond',Georgia,serif" font-weight="600">${esc(state.name)}</text>
+    <text x="${W/2}" y="1140" text-anchor="middle" font-size="26" letter-spacing="3" fill="#c8a15a" font-family="Georgia">${stars}</text>
+    <text x="${W/2}" y="1230" text-anchor="middle" font-size="30" fill="#cfc4ad" font-family="'Cormorant Garamond',Georgia,serif">${esc(ingLine)}</text>
+    <text x="${W/2}" y="1290" text-anchor="middle" font-size="24" letter-spacing="2" fill="#9a9078" font-family="Georgia" font-style="italic">${esc(flavorTags)}</text>
+    <text x="${W/2}" y="1380" text-anchor="middle" font-size="22" letter-spacing="2" fill="#8a8168" font-family="Georgia">盛于 ${esc(vesselName)}</text>
+    <g stroke="#6a6250" stroke-width="1" opacity=".5"><g transform="translate(60 60)"><line x1="-10" x2="10"/><line y1="-10" y2="10"/><circle r="7" fill="none"/></g><g transform="translate(${W-60} 60)"><line x1="-10" x2="10"/><line y1="-10" y2="10"/><circle r="7" fill="none"/></g></g>
+    <text x="${W/2}" y="${Hh-70}" text-anchor="middle" font-size="18" letter-spacing="6" fill="#6a6250" font-family="Georgia">SCREEN-PRINT</text>
+  </svg>`;
+}
+// compose a saved dish's art (from its own layers/vessel) centered at (cx,cy)
+function composeSavedDishArt(dish, cx, cy, scale){
+  const vArt = VESSEL_ART[dish.vessel] ? VESSEL_ART[dish.vessel]() : '';
+  let body='';
+  (dish.layers||[]).forEach((L)=>{ const fn=ING_ART[L.ing]; if(!fn)return; const p=L.pos||{x:0,y:0,s:1};
+    body += `<g transform="translate(${(p.x).toFixed(1)} ${(p.y).toFixed(1)}) scale(${p.s.toFixed(2)})">${fn()}</g>`; });
+  return `<g transform="translate(${cx} ${cy}) scale(${scale})"><g>${vArt}</g>${body}</g>`;
+}
+function buildMenuPosterSVG(){
+  const menu=loadMenu();
+  const W=1080, rowH=230, top=380, Hh=Math.max(1620, top + menu.length*rowH + 200);
+  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  ART.resetDefs();
+  let rows='';
+  menu.forEach((d,i)=>{
+    const y=top+i*rowH;
+    const ingLine=(d.layers||[]).map(l=>{const g=byId(l.ing);return g?g.name.split(' ')[0]:'';}).filter(Boolean).slice(0,6).join(' · ');
+    const stars=d.score>=90?'★★★':d.score>=78?'★★':d.score>=62?'★':'';
+    const vesselName=(DB.VESSELS.find(v=>v.id===d.vessel)||{}).name?.split(' ')[0]||'';
+    // thumbnail on the left (its own composed art, small)
+    const thumb = `<g opacity="0.98">${composeSavedDishArt(d, 150, y+34, 0.86)}</g>`;
+    const tx=280;
+    rows += `${thumb}
+      <text x="${tx}" y="${y-4}" font-size="42" fill="#f0e8d6" font-family="'Cormorant Garamond',Georgia,serif" font-weight="600">${esc(d.name)}</text>
+      <text x="${W-90}" y="${y-4}" text-anchor="end" font-size="24" letter-spacing="2" fill="#c8a15a" font-family="Georgia">${stars}</text>
+      <text x="${tx}" y="${y+38}" font-size="25" fill="#b8ae94" font-family="'Cormorant Garamond',Georgia,serif">${esc(ingLine)}</text>
+      <text x="${tx}" y="${y+74}" font-size="20" letter-spacing="1" fill="#8a8168" font-family="Georgia" font-style="italic">盛于 ${esc(vesselName)} · 评分 ${d.score}</text>
+      <line x1="90" y1="${y+120}" x2="${W-90}" y2="${y+120}" stroke="#3a362c" stroke-width="1"/>`;
+  });
+  const defs=ART.collectDefs();
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${Hh}" width="${W}" height="${Hh}"><defs>${defs}
+    <radialGradient id="mn-spot" cx="50%" cy="14%" r="60%"><stop offset="0%" stop-color="#3a352c" stop-opacity=".5"/><stop offset="60%" stop-color="#12100c" stop-opacity="0"/></radialGradient></defs>
+    <rect width="${W}" height="${Hh}" fill="#141210"/><rect width="${W}" height="${Hh}" fill="url(#mn-spot)"/>
+    <text x="${W/2}" y="150" text-anchor="middle" font-size="30" letter-spacing="12" fill="#8a8168" font-family="Georgia">LE MENU</text>
+    <text x="${W/2}" y="224" text-anchor="middle" font-size="72" fill="#f0e8d6" font-family="'Cormorant Garamond',Georgia,serif" font-weight="600">私 房 菜 单</text>
+    <text x="${W/2}" y="276" text-anchor="middle" font-size="22" letter-spacing="4" fill="#c8a15a" font-family="Georgia" font-style="italic">Fine Dining Lab</text>
+    <line x1="${W/2-90}" y1="316" x2="${W/2+90}" y2="316" stroke="#6a6250" stroke-width="1"/>
+    ${rows||`<text x="${W/2}" y="700" text-anchor="middle" font-size="30" fill="#6a6250" font-family="Georgia">菜单还是空的 —— 先收藏几道菜</text>`}
+    <text x="${W/2}" y="${Hh-60}" text-anchor="middle" font-size="18" letter-spacing="6" fill="#6a6250" font-family="Georgia">共 ${menu.length} 道</text>
+  </svg>`;
+}
+function _downloadBlob(blob, filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+function _canvasToDownload(canvas, filename){
+  // toBlob first; if it yields null (rare), fall back to toDataURL. A tainted canvas throws here.
+  return new Promise((resolve,reject)=>{
+    let settled=false;
+    try{
+      canvas.toBlob(b=>{
+        if(settled)return; settled=true;
+        if(b){ _downloadBlob(b,filename); resolve('blob'); return; }
+        try{ const u=canvas.toDataURL('image/png'); const a=document.createElement('a'); a.href=u; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); resolve('dataurl'); }
+        catch(e){ reject(e); }
+      },'image/png');
+    }catch(e){ if(!settled){settled=true; reject(e);} }
+  });
+}
+// Rasterize an SVG string to PNG using several strategies; the SVG itself is always downloadable as a last resort.
+async function exportSVGtoPNG(svgStr, filename, scale=1){
+  const vb=svgStr.match(/viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/);
+  const w=vb?Math.round(+vb[1]):1080, h=vb?Math.round(+vb[2]):1620;
+  if(!/xmlns=/.test(svgStr)) svgStr=svgStr.replace('<svg','<svg xmlns="http://www.w3.org/2000/svg"');
+  const pngName=filename, svgName=filename.replace(/\.png$/,'')+'.svg';
+  const blob=new Blob([svgStr],{type:'image/svg+xml;charset=utf-8'});
+
+  const paint=(source)=>{
+    const c=document.createElement('canvas'); c.width=w*scale; c.height=h*scale;
+    const ctx=c.getContext('2d');
+    ctx.fillStyle='#141210'; ctx.fillRect(0,0,c.width,c.height);
+    ctx.drawImage(source,0,0,c.width,c.height);
+    return c;
+  };
+
+  // Strategy 1: createImageBitmap(blob) — does NOT taint the canvas even on file://, unlike <img>.
+  if(typeof createImageBitmap==='function'){
+    try{
+      const bmp=await createImageBitmap(blob);
+      const c=paint(bmp);
+      await _canvasToDownload(c, pngName);
+      toast('图片已导出到下载文件夹'); return;
+    }catch(e){ /* fall through to <img> */ }
+  }
+
+  // Strategy 2: <img> from a blob: URL, then a data: URI.
+  const loadImg=(src)=>new Promise((res,rej)=>{
+    const img=new Image(); img.decoding='async';
+    const to=setTimeout(()=>rej(new Error('timeout')),8000);
+    img.onload=()=>{clearTimeout(to);res(img);};
+    img.onerror=()=>{clearTimeout(to);rej(new Error('img-load'));};
+    img.src=src;
+  });
+  const blobUrl=URL.createObjectURL(blob);
+  const dataUri='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr);
+  for(const src of [blobUrl,dataUri]){
+    try{
+      const img=await loadImg(src);
+      const c=paint(img);
+      await _canvasToDownload(c, pngName);
+      if(src===blobUrl) URL.revokeObjectURL(blobUrl);
+      toast('图片已导出到下载文件夹'); return;
+    }catch(e){ /* try next */ }
+  }
+  URL.revokeObjectURL(blobUrl);
+
+  // Last resort: hand over the vector SVG itself (opens/prints on any phone, always works).
+  _downloadBlob(blob, svgName);
+  toast('已导出矢量图 '+svgName+'(PNG 受浏览器限制未生成,SVG 手机可直接打开)');
+}
+function exportDishImage(){ if(!state.layers.length){toast('先做一道菜再导出');return;} exportSVGtoPNG(buildDishPosterSVG(), (state.name||'dish')+'.png'); }
+function exportMenuImage(){ if(!loadMenu().length){toast('菜单还是空的');return;} exportSVGtoPNG(buildMenuPosterSVG(),'fine-dining-menu.png'); }
+
+function openMenu(){
+  const m=loadMenu();
+  const items = m.length ? m.map(d=>{
+    const ingLine=d.layers.map(l=>byId(l.ing)?.name.split(' ')[0]).filter(Boolean).slice(0,5).join(' · ');
+    const stars=d.score>=90?'★★★':d.score>=78?'★★':d.score>=62?'★':'—';
+    ART.resetDefs();
+    const art=composeSavedDishArt(d, 60, 46, 0.42);
+    const thumb=`<svg viewBox="0 0 120 92" width="60" height="46" style="flex:none;border-radius:8px;background:#141210;border:1px solid var(--line)"><defs>${ART.collectDefs()}</defs><rect width="120" height="92" fill="#141210"/>${art}</svg>`;
+    return `<div class="menu-row">
+      ${thumb}
+      <div class="mr-main"><div class="mr-name">${d.name}</div><div class="mr-ing">${ingLine}</div>
+        <div class="mr-meta">${stars} · 评分 ${d.score} · ${(DB.VESSELS.find(v=>v.id===d.vessel)||{}).name?.split(' ')[0]||''}</div></div>
+      <div class="mr-btns"><button class="btn" data-load="${d.id}">载入</button><button class="btn" data-del="${d.id}">删</button></div>
+    </div>`;
+  }).join('') : '<div style="color:var(--muted);padding:24px;text-align:center">菜单还是空的 —— 做一道菜,点「＋ 收进菜单」收藏起来。</div>';
+  openModal(`
+    <div class="mlabel">我的菜单 · MY MENU</div>
+    <h2>私房菜单 <span style="font-size:14px;color:var(--muted)">共 ${m.length} 道</span></h2>
+    <div class="menu-list">${items}</div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn gold" data-act="export-menu" style="flex:1">⬇ 导出整份菜单图(手机版)</button>
+      <button class="btn close" data-act="close-modal">关闭</button>
+    </div>
+  `);
+}
+
+/* ================= EVENTS ================= */
+function addLayer(id){ if(state.layers.length>=MAX_LAYERS){ toast(`一道菜最多 ${MAX_LAYERS} 层 —— 精致摆盘讲究克制`); return; } state.layers.push({ing:id,tech:null}); rebuildDish(); renderCard(); }
+function removeLayer(idx){ state.layers.splice(idx,1); rebuildDish(); renderCard(); }
+
+document.addEventListener('click',e=>{
+  const fav=e.target.closest('[data-fav]'); if(fav){e.stopPropagation();toggleFav(fav.dataset.fav);return;}
+  const cat=e.target.closest('[data-cat]'); if(cat){activeCat=cat.dataset.cat;renderCatFilter();renderPantry(document.getElementById('search').value);return;}
+  const add=e.target.closest('[data-add]'); if(add){addLayer(add.dataset.add);return;}
+  const rm=e.target.closest('[data-rm]'); if(rm){removeLayer(+rm.dataset.rm);return;}
+  const ve=e.target.closest('[data-vessel]'); if(ve){state.vessel=ve.dataset.vessel;renderVessels();buildVessel();renderCard();return;}
+  const se=e.target.closest('[data-season]'); if(se){state.season=se.dataset.season;renderContext();renderPantry(document.getElementById('search').value);renderCard();return;}
+  const ld=e.target.closest('[data-load]'); if(ld){loadDishFromMenu(ld.dataset.load);return;}
+  const dl=e.target.closest('[data-del]'); if(dl){deleteFromMenu(dl.dataset.del);return;}
+  const act=e.target.closest('[data-act]'); if(act){
+    const a=act.dataset.act;
+    if(a==='rotate'){autoRotate=!autoRotate; rot+=0.5; renderStage();}
+    if(a==='clear'){state.layers=[];state.name='未命名之作';rebuildDish();renderCard();}
+    if(a==='random'){randomDish();}
+    if(a==='demo'){loadDemo();}
+    if(a==='ai'){aiInspire();}
+    if(a==='match'){matchDish();}
+    if(a==='menu'){openMenu();}
+    if(a==='save'){saveCurrentToMenu();}
+    if(a==='export-dish'){exportDishImage();}
+    if(a==='export-menu'){exportMenuImage();}
+    if(a==='close-modal'){closeModal();}
+  }
+});
+document.getElementById('search').addEventListener('input',e=>renderPantry(e.target.value));
+document.getElementById('dish-name').addEventListener('click',()=>{
+  const nn=prompt('给这道菜命名:',state.name); if(nn){state.name=nn.trim()||state.name;renderCard();}
+});
+document.getElementById('modal').addEventListener('click',e=>{ if(e.target.id==='modal')closeModal(); });
+
+/* ================= BOOT ================= */
+/* B4: mobile panel switcher */
+function setMobilePanel(m){ document.body.dataset.m=m; document.querySelectorAll('#mobile-nav button').forEach(b=>b.classList.toggle('on',b.dataset.m===m)); }
+document.getElementById('mobile-nav').addEventListener('click',e=>{const b=e.target.closest('[data-m]'); if(b)setMobilePanel(b.dataset.m);});
+setMobilePanel('stage');
+renderContext(); renderCatFilter(); renderPantry(); renderVessels(); renderCard();
+initStage();
+</script>
+
+</body>
+</html>

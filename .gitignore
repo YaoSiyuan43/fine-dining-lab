@@ -1,0 +1,6 @@
+# heavy / abandoned assets not needed for the live page (index.html is self-contained)
+models/
+renders/
+blender/
+scene_3d.html
+sample_dish.html
